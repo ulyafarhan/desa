@@ -5,11 +5,12 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\WargaController;
+use App\Http\Controllers\ChatController;
 use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------
-| Public Routes
+| Public Routes (Halaman Depan)
 |--------------------------------------------------------------------------
 */
 
@@ -24,41 +25,40 @@ Route::get('/', function () {
 
 /*
 |--------------------------------------------------------------------------
-| Authenticated & Warga Routes (Requires Auth)
+| Authenticated Routes (Wajib Login)
 |--------------------------------------------------------------------------
 */
 
 Route::middleware('auth')->group(function () {
-    // Rute Profile Bawaan Laravel
+    // Manajemen Profil Bawaan
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     
-    // Rute Secure Document View (Membutuhkan AUTH saja, karena otorisasi dilakukan di Controller)
+    // Lihat Dokumen Aman (Streaming)
+    // Otorisasi detail (apakah user berhak lihat) ditangani di dalam Controller
     Route::get('/dokumen/lihat/{surat}', [DocumentController::class, 'show'])->name('dokumen.show');
 });
 
-
 /*
 |--------------------------------------------------------------------------
-| Warga Dashboard & Pengajuan Routes (Requires Auth & Verified)
+| Warga Area (Wajib Login & Verified)
 |--------------------------------------------------------------------------
-| Warga harus terautentikasi dan diverifikasi (verified) untuk mengakses 
-| dashboard dan formulir pengajuan.
+| Area ini memuat Dashboard Warga dan Formulir Pengajuan.
 */
 
-// Catatan: Middleware 'verified' di Breeze umumnya merujuk pada email_verified. 
-// Dalam sistem kita, ini memastikan user sudah melewati langkah verifikasi awal.
 Route::middleware(['auth', 'verified'])->group(function () {
     
-    // Dashboard Utama Warga: Ganti rute dashboard bawaan
+    // Dashboard Warga (Menggantikan Dashboard default Breeze)
     Route::get('/dashboard', [WargaController::class, 'index'])->name('dashboard');
     
-    // Rute Formulir Pengajuan Surat
+    // Formulir Pengajuan Surat Dinamis
     Route::get('/formulir/{template}', [WargaController::class, 'showForm'])->name('warga.form');
     Route::post('/formulir', [WargaController::class, 'store'])->name('warga.store'); 
 
-});
+    Route::post('/chat/send', [ChatController::class, 'sendMessage'])->name('chat.send');
+    Route::get('/chat/history', [ChatController::class, 'getHistory'])->name('chat.history');
 
+});
 
 require __DIR__.'/auth.php';

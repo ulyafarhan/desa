@@ -23,8 +23,8 @@
             text-align: center;
             /* Garis bawah tebal khas surat dinas */
             border-bottom: 3px solid #000; 
-            padding-bottom: 10px;
-            margin-bottom: 25px;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
             position: relative;
         }
 
@@ -53,7 +53,7 @@
         /* --- JUDUL & NOMOR --- */
         .title-section {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
 
         .title-section h4 {
@@ -65,7 +65,7 @@
         }
 
         .title-section p {
-            margin: 5px 0 0 0;
+            margin: 2px 0 0 0;
             font-size: 12pt;
         }
 
@@ -75,7 +75,8 @@
         }
 
         .content p {
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            line-height: 1.4;
             text-indent: 30px; /* Menjorok ke dalam untuk paragraf baru */
         }
         
@@ -89,7 +90,7 @@
         .table-biodata {
             width: 100%;
             margin-left: 30px; /* Sedikit menjorok ke kanan */
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             border-collapse: collapse;
         }
 
@@ -114,7 +115,7 @@
         /* --- AREA TANDA TANGAN --- */
         .ttd-container {
             width: 100%;
-            margin-top: 20px;
+            margin-top: 10px;
             /* Trik untuk memastikan area TTD tidak terpotong halaman */
             page-break-inside: avoid; 
         }

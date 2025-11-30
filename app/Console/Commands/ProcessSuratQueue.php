@@ -10,14 +10,29 @@ use Illuminate\Support\Facades\Log;
 
 class ProcessSuratQueue extends Command
 {
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'desa:process-queue';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'Memproses antrian surat warga menjadi PDF (Max 5 per run)';
 
+    /**
+     * Execute the console command.
+     */
     public function handle()
     {
         $this->info('Memulai pemrosesan antrian surat...');
 
         // 1. Ambil Antrian (Batch 5)
+        // Menggunakan 'lockForUpdate' (opsional tapi bagus) untuk mencegah race condition jika server sibuk
         $antrian = SuratRequest::where('status', 'in_queue')
             ->orderBy('created_at', 'asc')
             ->limit(5)
@@ -29,86 +44,101 @@ class ProcessSuratQueue extends Command
         }
 
         foreach ($antrian as $surat) {
-            $this->info("Memproses Surat ID: {$surat->id}");
+            $this->info("Memproses Surat ID: {$surat->id} - " . ($surat->template->judul_surat ?? 'Tanpa Judul'));
             
-            // Lock status
+            // Ubah status jadi processing agar tidak diambil worker lain
             $surat->update(['status' => 'processing']);
 
             try {
-                // --- LOGIKA PENOMORAN OTOMATIS ---
+                // --- A. LOGIKA PENOMORAN OTOMATIS ---
                 
-                // 1. Ambil Tahun & Bulan Romawi
                 $tahun = date('Y');
-                // date('n') menghasilkan angka 1-12 tanpa nol di depan
-                $bulanRomawi = $this->getRomawi(date('n')); 
+                $bulanRomawi = $this->getRomawi(date('n')); // Menggunakan date('n') 1-12
                 
-                // 2. Ambil Kode Klasifikasi (Default 470 jika kosong di template)
+                // Ambil Kode Klasifikasi (Default 470 jika kosong)
                 $kodeKlasifikasi = $surat->template->kode_surat ?? '470'; 
 
-                // 3. Hitung Urutan Surat
+                // Hitung Urutan Surat yang sudah completed di tahun ini
                 $urutanTerakhir = SuratRequest::whereYear('updated_at', $tahun)
                     ->where('status', 'completed')
                     ->count();
                     
+                // Format: 001, 002, dst.
                 $nomorUrut = str_pad($urutanTerakhir + 1, 3, '0', STR_PAD_LEFT);
 
-                // 4. Format Nomor: 470 / 001 / DS-SMART / XI / 2025
+                // Rakit Nomor Surat: 470 / 001 / DS-SMART / XI / 2025
                 $nomorSuratFinal = "{$kodeKlasifikasi} / {$nomorUrut} / DS-SMART / {$bulanRomawi} / {$tahun}";
 
-                // --- PEMROSESAN DATA SK KHUSUS (Jika ini Surat Keputusan) ---
+
+                // --- B. PERSIAPAN DATA (VIEW DATA) ---
+                
+                // Ambil raw data (sudah array karena casting di Model)
+                $rawData = $surat->data_input;
+                $viewData = [];
+
+                // Cek jenis template untuk pemrosesan data khusus
                 if ($surat->template->view_template === 'templates.surat_keputusan') {
-                    $dataArray = json_decode($surat->data_input, true);
+                    // --- LOGIKA KHUSUS SK KEPALA DESA ---
                     
-                    // Pecah teks panjang menjadi array per baris untuk diktum
-                    $data['menimbang_array'] = explode("\n", $dataArray['Menimbang (Perlu dipertimbangkan)']);
-                    $data['mengingat_array'] = explode("\n", $dataArray['Mengingat (Dasar Hukum)']);
+                    // Ambil string dari input, jika kosong default ke string kosong
+                    $menimbangText = $rawData['Menimbang (Perlu dipertimbangkan)'] ?? '';
+                    $mengingatText = $rawData['Mengingat (Dasar Hukum)'] ?? '';
+                    $memutuskanText = $rawData['Diktum 1 (MEMUTUSKAN)'] ?? '';
+
+                    // Pecah teks textarea menjadi array per baris (explode newline)
+                    $viewData['menimbang_array'] = !empty($menimbangText) ? explode("\n", $menimbangText) : [];
+                    $viewData['mengingat_array'] = !empty($mengingatText) ? explode("\n", $mengingatText) : [];
                     
-                    // Pecah Diktum Memutuskan (Contoh: Pasal 1: [Isi])
-                    $memutuskan_raw = $dataArray['Diktum 1 (MEMUTUSKAN)'];
-                    $memutuskan_lines = explode("\n", $memutuskan_raw);
+                    $viewData['tentang'] = $rawData['Tentang (Subjek SK)'] ?? 'PENETAPAN';
+
+                    // Pecah Diktum Memutuskan (Contoh input: "Pasal 1: Isi putusan")
+                    $memutuskan_lines = !empty($memutuskanText) ? explode("\n", $memutuskanText) : [];
                     $memutuskan_dict = [];
+                    
                     foreach ($memutuskan_lines as $line) {
+                        // Pisahkan Key dan Value jika ada titik dua
                         if (strpos($line, ':') !== false) {
                             list($key, $value) = explode(':', $line, 2);
                             $memutuskan_dict[trim($key)] = trim($value);
+                        } else {
+                            // Jika tidak ada format "Key: Value", masukkan sebagai item biasa
+                            $memutuskan_dict[] = trim($line);
                         }
                     }
-                    
-                    // Kirim data yang sudah dipecah ke Blade
-                    $data['tentang'] = $dataArray['Tentang (Subjek SK)'];
-                    $data['memutuskan_array'] = $memutuskan_dict;
+                    $viewData['memutuskan_array'] = $memutuskan_dict;
+
                 } else {
-                    // Jika surat biasa, ambil data input seperti biasa
-                    $data = $surat->data_input; 
+                    // --- LOGIKA SURAT BIASA (SKTM, Domisili, dll) ---
+                    // Langsung pakai data apa adanya
+                    $viewData = $rawData; 
                 }
 
-                // Ganti Pdf::loadView agar menggunakan variabel $data yang baru:
-                $pdf = Pdf::loadView($surat->template->view_template, [ // <-- Ganti dari 'templates.default_surat'
+
+                // --- C. GENERASI PDF ---
+                
+                // Gunakan view yang didefinisikan di database (Dinamis)
+                // Default fallback ke 'templates.default_surat' jika kosong (safety)
+                $viewTemplate = $surat->template->view_template ?: 'templates.default_surat';
+
+                $pdf = Pdf::loadView($viewTemplate, [
                     'surat' => $surat,
-                    'nomor_surat_baru' => $nomorSuratFinal, 
+                    'nomor_surat_baru' => $nomorSuratFinal, // Variabel penting untuk view
                     'user' => $surat->user,
                     'pejabat' => $surat->pejabat,
-                    'data' => $data // <-- Kirim data yang sudah dipecah
+                    'data' => $viewData // Data yang sudah diproses (array biasa atau array SK)
                 ])->setPaper('a4', 'portrait');
 
-                // --- GENERASI PDF ---
-                
-                $pdf = Pdf::loadView('templates.default_surat', [
-                    'surat' => $surat,
-                    'nomor_surat_baru' => $nomorSuratFinal, // Variabel ini dikirim ke Blade
-                    'user' => $surat->user,
-                    'pejabat' => $surat->pejabat,
-                    'data' => $surat->data_input 
-                ])->setPaper('a4', 'portrait');
 
-                // --- SIMPAN FILE ---
+                // --- D. SIMPAN FILE ---
                 
-                $fileName = 'SURAT_' . $surat->id . '_' . $surat->user->nik . '.pdf';
+                $fileName = 'SURAT_' . $surat->id . '_' . ($surat->user->nik ?? 'unknown') . '.pdf';
                 $path = 'private_docs/' . $fileName;
 
+                // Simpan ke storage (pastikan folder private_docs ada)
                 Storage::put($path, $pdf->output());
 
-                // --- UPDATE DATABASE ---
+
+                // --- E. UPDATE DATABASE (FINALISASI) ---
                 
                 $surat->update([
                     'status' => 'completed',
@@ -119,7 +149,7 @@ class ProcessSuratQueue extends Command
                 $this->info("Sukses: {$fileName} (No: {$nomorSuratFinal})");
 
             } catch (\Exception $e) {
-                // Error Handling
+                // Error Handling agar worker tidak mati total
                 Log::error("Gagal memproses surat ID {$surat->id}: " . $e->getMessage());
                 
                 $surat->update([
@@ -127,7 +157,7 @@ class ProcessSuratQueue extends Command
                     'catatan_admin' => 'Sistem Error: ' . substr($e->getMessage(), 0, 200)
                 ]);
                 
-                $this->error("Gagal: " . $e->getMessage());
+                $this->error("Gagal ID {$surat->id}: " . $e->getMessage());
             }
         }
 
@@ -136,7 +166,6 @@ class ProcessSuratQueue extends Command
 
     /**
      * Fungsi Helper untuk mengubah Angka Bulan menjadi Romawi
-     * Posisinya HARUS di dalam Class, tapi di luar function handle()
      */
     private function getRomawi($bulan)
     {
