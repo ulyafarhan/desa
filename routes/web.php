@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\WargaController;
 use App\Http\Controllers\ChatController;
+use App\Models\Panduan;
 use Inertia\Inertia;
 
 /*
@@ -21,7 +22,25 @@ Route::get('/', function () {
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);
-});
+})->name('welcome');
+
+Route::get('/panduan', function () {
+    // Ambil panduan yang aktif
+    $guides = Panduan::where('is_active', true)->latest()->get();
+
+    return Inertia::render('Panduan', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+        'dynamicGuides' => $guides, // <-- Kirim data ke Vue
+    ]);
+})->name('panduan');
+
+Route::get('/kontak', function () {
+    return Inertia::render('Kontak', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+    ]);
+})->name('kontak');
 
 /*
 |--------------------------------------------------------------------------

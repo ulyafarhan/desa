@@ -34,14 +34,11 @@ class UserResource extends Resource
                             ->maxLength(255),
                         Forms\Components\Textarea::make('alamat_lengkap')
                             ->label('Alamat Lengkap')
-                            ->required()
                             ->rows(2),
                         Forms\Components\DatePicker::make('tanggal_lahir')
-                            ->label('Tanggal Lahir')
-                            ->required(),
+                            ->label('Tanggal Lahir'),
                         Forms\Components\TextInput::make('tempat_lahir')
-                            ->label('Tempat Lahir')
-                            ->required(),
+                            ->label('Tempat Lahir'),
                     ])->columns(2),
 
                 Forms\Components\Section::make('Sistem & Akses')

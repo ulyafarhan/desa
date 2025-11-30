@@ -25,6 +25,26 @@ class User extends Authenticatable implements FilamentUser
         'data_biometrik' => 'array',
     ];
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'nik',
+        'role',
+        'status_akun',
+        'tempat_lahir',
+        'tanggal_lahir',
+        'alamat_lengkap',
+        'data_biometrik',
+        'file_ktp_path',
+        'file_kk_path',
+    ];
+
     public function canAccessPanel(Panel $panel): bool
     {
         // Hanya Admin dan Staff yang boleh mengakses Panel Admin

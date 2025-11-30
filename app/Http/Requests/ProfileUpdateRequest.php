@@ -25,6 +25,17 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            // --- KOLOM TAMBAHAN (WAJIB ADA) ---
+            'nik' => [
+                'required', 
+                'string', 
+                'max:16', 
+                // NIK harus unik, tapi abaikan untuk user ini sendiri (saat update)
+                Rule::unique(User::class)->ignore($this->user()->id)
+            ],
+            'tempat_lahir' => ['nullable', 'string', 'max:255'],
+            'tanggal_lahir' => ['nullable', 'date'],
+            'alamat_lengkap' => ['nullable', 'string'],
         ];
     }
 }

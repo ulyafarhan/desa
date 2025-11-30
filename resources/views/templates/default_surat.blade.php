@@ -215,7 +215,7 @@
             </table>
 
             <p>
-                {!! nl2br(e($surat->template->body_text)) !!} 
+                {!! nl2br(e($processed_body ?? $surat->template->body_text)) !!}
             </p>
 
             <p>

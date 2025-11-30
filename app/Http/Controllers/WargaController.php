@@ -40,7 +40,14 @@ class WargaController extends Controller
                 ->withErrors(['message' => 'Akun Anda belum diverifikasi oleh Admin Desa.']);
         }
         
-        $schema = json_decode($template->form_schema, true);
+        // Pastikan form_schema bisa berupa string (JSON), array, atau null — hasil akhir selalu array
+        $schema = [];
+        $formSchema = $template->form_schema;
+        if (is_string($formSchema)) {
+            $schema = json_decode($formSchema, true) ?? [];
+        } elseif (is_array($formSchema)) {
+            $schema = $formSchema;
+        }
         
         return Inertia::render('Warga/FormulirPengajuan', [
             'template' => $template->only('id', 'judul_surat', 'deskripsi'),

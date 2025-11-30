@@ -1,199 +1,282 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
-import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import { ref } from 'vue';
+// Import Komponen Shadcn
 import { Button } from '@/Components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/Components/ui/card';
+import { Input } from '@/Components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/Components/ui/avatar';
 import { Badge } from '@/Components/ui/badge';
-import { Separator } from '@/Components/ui/separator';
+// Import Ikon
+import { 
+    Menu, X, ArrowRight, CheckCircle2, 
+    TrendingUp, Activity, FileText, Users 
+} from 'lucide-vue-next';
 
 defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
-    laravelVersion: String,
-    phpVersion: String,
 });
 
-const features = [
-    {
-        title: 'Pengajuan Online',
-        desc: 'Ajukan surat keterangan domisili, usaha, dan lainnya langsung dari rumah tanpa antri.',
-        icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
-    },
-    {
-        title: 'SiDesa AI Assistant',
-        desc: 'Tanya jawab seputar syarat dan prosedur layanan desa 24 jam dengan kecerdasan buatan.',
-        icon: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z'
-    },
-    {
-        title: 'Tanda Tangan Digital',
-        desc: 'Dokumen sah dengan Tanda Tangan Elektronik (TTE) dan QR Code yang dapat diverifikasi.',
-        icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
-    },
-    {
-        title: 'Tracking Realtime',
-        desc: 'Pantau status permohonan Anda mulai dari verifikasi hingga dokumen siap unduh.',
-        icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
-    }
-];
+const isMenuOpen = ref(false);
 </script>
 
 <template>
     <Head title="Pelayanan Desa Digital" />
 
-    <div class="min-h-screen bg-slate-50 text-slate-900 selection:bg-slate-900 selection:text-white">
+    <div class="min-h-screen bg-white font-sans text-slate-900">
         
-        <nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-16">
-                    <div class="flex items-center gap-2">
-                        <ApplicationLogo class="h-8 w-8 text-slate-900" />
-                        <span class="font-bold text-xl tracking-tight text-slate-900">DESA-Smart</span>
-                    </div>
+        <header class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
+            <nav class="mx-auto flex max-w-7xl items-center justify-between p-4 lg:px-8" aria-label="Global">
+                <div class="flex lg:flex-1 items-center gap-2">
+                    <div class="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold">D</div>
+                    <span class="text-xl font-bold tracking-tight text-slate-900">DESA-Smart</span>
+                </div>
+                
+                <div class="flex lg:hidden">
+                    <button type="button" class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-slate-700" @click="isMenuOpen = true">
+                        <span class="sr-only">Buka menu</span>
+                        <Menu class="h-6 w-6" aria-hidden="true" />
+                    </button>
+                </div>
 
-                    <div v-if="canLogin" class="flex items-center gap-4">
-                        <template v-if="$page.props.auth.user">
-                            <Link :href="route('dashboard')">
-                                <Button>Dashboard</Button>
-                            </Link>
-                        </template>
-                        <template v-else>
-                            <Link :href="route('login')">
-                                <Button variant="ghost" class="font-semibold text-slate-600 hover:text-slate-900">Masuk</Button>
-                            </Link>
-                            <Link v-if="canRegister" :href="route('register')">
-                                <Button>Daftar Sekarang</Button>
-                            </Link>
-                        </template>
+                <div class="hidden lg:flex lg:gap-x-12">
+                    <a href="#fitur" class="text-sm font-semibold leading-6 text-slate-600 hover:text-brand-500 transition-colors">Layanan</a>
+                    <a href="/panduan" class="text-sm font-semibold leading-6 text-slate-600 hover:text-brand-500 transition-colors">Panduan</a>
+                    <a href="/kontak" class="text-sm font-semibold leading-6 text-slate-600 hover:text-brand-500 transition-colors">Kontak</a>
+                </div>
+
+                <div class="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
+                    <template v-if="$page.props.auth.user">
+                        <Link :href="route('dashboard')">
+                            <Button class="bg-slate-900 hover:bg-slate-800 text-white font-semibold shadow-md">
+                                Dashboard Saya
+                            </Button>
+                        </Link>
+                    </template>
+                    <template v-else>
+                        <Link :href="route('login')">
+                            <Button variant="ghost" class="font-semibold">Masuk</Button>
+                        </Link>
+                        <Link :href="route('register')">
+                            <Button class="bg-brand-500 hover:bg-brand-600 text-white font-semibold shadow-lg shadow-brand-500/30">
+                                Daftar Akun
+                            </Button>
+                        </Link>
+                    </template>
+                </div>
+            </nav>
+
+            <div v-if="isMenuOpen" class="lg:hidden" role="dialog" aria-modal="true">
+                <div class="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm" @click="isMenuOpen = false"></div>
+                <div class="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm border-l">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xl font-bold">Menu</span>
+                        <button type="button" class="-m-2.5 rounded-md p-2.5 text-slate-700" @click="isMenuOpen = false">
+                            <span class="sr-only">Tutup menu</span>
+                            <X class="h-6 w-6" aria-hidden="true" />
+                        </button>
+                    </div>
+                    <div class="mt-6 flow-root">
+                        <div class="-my-6 divide-y divide-slate-100">
+                            <div class="space-y-2 py-6">
+                                <a href="#" class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-900 hover:bg-slate-50">Layanan</a>
+                                <a href="#" class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-900 hover:bg-slate-50">Panduan</a>
+                            </div>
+                            <div class="py-6 flex flex-col gap-2">
+                                <template v-if="$page.props.auth.user">
+                                    <Link :href="route('dashboard')">
+                                        <Button class="w-full bg-slate-900 hover:bg-slate-800 text-white">Buka Dashboard</Button>
+                                    </Link>
+                                </template>
+                                <template v-else>
+                                    <Link :href="route('login')"><Button variant="outline" class="w-full">Masuk</Button></Link>
+                                    <Link :href="route('register')"><Button class="w-full bg-brand-500 hover:bg-brand-600">Daftar Akun</Button></Link>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </nav>
-
-        <header class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-                <Badge variant="outline" class="mb-6 py-1.5 px-4 text-sm bg-white/50 backdrop-blur border-slate-300 text-slate-600">
-                    ✨ Transformasi Digital Pelayanan Publik
-                </Badge>
-                
-                <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-6">
-                    Urus Surat Desa <br />
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-slate-700 to-slate-500">
-                        Cukup dari Rumah
-                    </span>
-                </h1>
-                
-                <p class="mt-4 text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-                    Sistem pelayanan administrasi mandiri terpadu. 
-                    Lebih cepat, transparan, dan efisien dengan dukungan teknologi cerdas.
-                </p>
-
-                <div class="flex flex-col sm:flex-row justify-center gap-4">
-                    <Link :href="route('register')">
-                        <Button size="lg" class="w-full sm:w-auto h-12 px-8 text-base">
-                            Buat Akun Warga
-                        </Button>
-                    </Link>
-                    <Link :href="route('login')">
-                        <Button size="lg" variant="outline" class="w-full sm:w-auto h-12 px-8 text-base bg-white">
-                            Masuk Aplikasi
-                        </Button>
-                    </Link>
-                </div>
-            </div>
-
-            <div class="absolute top-0 left-0 w-full h-full -z-10 opacity-30">
-                <div class="absolute right-0 top-0 bg-gradient-to-b from-slate-200 to-transparent w-1/2 h-full blur-3xl"></div>
-                <div class="absolute left-0 bottom-0 bg-gradient-to-t from-slate-200 to-transparent w-1/2 h-full blur-3xl"></div>
             </div>
         </header>
 
-        <section class="py-20 bg-white border-y border-slate-100">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="text-center mb-16">
-                    <h2 class="text-3xl font-bold text-slate-900">Kenapa Menggunakan DESA-Smart?</h2>
-                    <p class="mt-4 text-lg text-slate-600">Solusi modern untuk kebutuhan administrasi warga.</p>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    <Card v-for="(feature, index) in features" :key="index" class="border-slate-200 hover:shadow-lg transition-all duration-300 group">
-                        <CardHeader>
-                            <div class="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-slate-900 transition-colors duration-300">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-700 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="feature.icon" />
-                                </svg>
-                            </div>
-                            <CardTitle class="text-xl">{{ feature.title }}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p class="text-slate-600 leading-relaxed">
-                                {{ feature.desc }}
+        <main>
+            <div class="relative isolate pt-24 lg:pt-32 pb-16 overflow-hidden lg:mt-8 xs:mt-0">
+                <div class="mx-auto max-w-7xl px-6 lg:px-8">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+                        
+                        <div class="max-w-2xl">
+                            <Badge variant="outline" class="mb-6 px-4 py-1 text-sm border-brand-200 bg-brand-50 text-brand-700 rounded-full">
+                                Pelayanan Desa Digital Terpadu
+                            </Badge>
+                            
+                            <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-6xl lg:leading-[1.1] mb-6">
+                                Urus Administrasi <br />
+                                <span class="text-brand-500">Lebih Cepat & Mudah</span>
+                            </h1>
+                            
+                            <p class="text-lg leading-8 text-slate-600 mb-8">
+                                Tidak perlu lagi antri di kantor desa. Ajukan surat keterangan, SKCK, dan administrasi lainnya langsung dari rumah Anda melalui DESA-Smart.
                             </p>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        </section>
+                            
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <template v-if="$page.props.auth.user">
+                                    <Link :href="route('dashboard')">
+                                        <Button size="lg" class="h-12 px-8 text-base bg-brand-500 hover:bg-brand-600 shadow-xl shadow-brand-500/20 w-full sm:w-auto">
+                                            Buka Dashboard Saya <ArrowRight class="ml-2 h-4 w-4" />
+                                        </Button>
+                                    </Link>
+                                </template>
+                                <template v-else>
+                                    <Link :href="route('register')">
+                                        <Button size="lg" class="h-12 px-8 text-base bg-brand-500 hover:bg-brand-600 shadow-xl shadow-brand-500/20 w-full sm:w-auto">
+                                            Mulai Sekarang <ArrowRight class="ml-2 h-4 w-4" />
+                                        </Button>
+                                    </Link>
+                                    <Link :href="route('login')">
+                                        <Button size="lg" variant="outline" class="h-12 px-8 text-base border-slate-300 w-full sm:w-auto">
+                                            Masuk Aplikasi
+                                        </Button>
+                                    </Link>
+                                </template>
+                            </div>
 
-        <section class="py-20 bg-slate-900 text-white">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-slate-800">
-                    <div class="p-4">
-                        <div class="text-4xl font-bold mb-2">24/7</div>
-                        <div class="text-slate-400">Layanan Online</div>
-                    </div>
-                    <div class="p-4">
-                        <div class="text-4xl font-bold mb-2">< 5 Menit</div>
-                        <div class="text-slate-400">Waktu Pengajuan</div>
-                    </div>
-                    <div class="p-4">
-                        <div class="text-4xl font-bold mb-2">100%</div>
-                        <div class="text-slate-400">Transparansi Proses</div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <footer class="bg-white border-t border-slate-200 pt-16 pb-8">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-                    <div class="col-span-1 md:col-span-2">
-                        <div class="flex items-center gap-2 mb-4">
-                            <ApplicationLogo class="h-8 w-8 text-slate-900" />
-                            <span class="font-bold text-xl">DESA-Smart</span>
+                            <div class="mt-10 flex items-center gap-x-4">
+                                <div class="flex -space-x-3">
+                                    <Avatar class="border-2 border-white w-10 h-10"><AvatarImage src="https://i.pravatar.cc/100?img=1" /><AvatarFallback>W1</AvatarFallback></Avatar>
+                                    <Avatar class="border-2 border-white w-10 h-10"><AvatarImage src="https://i.pravatar.cc/100?img=2" /><AvatarFallback>W2</AvatarFallback></Avatar>
+                                    <Avatar class="border-2 border-white w-10 h-10"><AvatarImage src="https://i.pravatar.cc/100?img=3" /><AvatarFallback>W3</AvatarFallback></Avatar>
+                                    <Avatar class="border-2 border-white w-10 h-10 bg-slate-100 text-xs font-medium text-slate-600 flex items-center justify-center">+500</Avatar>
+                                </div>
+                                <div class="text-sm leading-6 text-slate-600">
+                                    Warga telah bergabung
+                                </div>
+                            </div>
                         </div>
-                        <p class="text-slate-600 max-w-sm">
-                            Platform digital untuk mempermudah administrasi dan pelayanan publik di tingkat desa. Mewujudkan desa yang transparan, akuntabel, dan modern.
-                        </p>
+
+                        <div class="relative h-[450px] w-full hidden lg:block">
+                            <div class="absolute top-10 right-10 w-96 h-96 bg-brand-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+                            
+                            <Card class="absolute top-0 right-0 w-[80%] h-[280px] bg-white shadow-2xl border-slate-100 rounded-2xl z-10 transform translate-x-8 -translate-y-8">
+                                <CardHeader class="pb-2">
+                                    <div class="flex justify-between items-center">
+                                        <CardTitle class="text-base font-medium text-slate-500">Pengajuan Minggu Ini</CardTitle>
+                                        <div class="p-2 bg-slate-50 rounded-full"><Activity class="h-4 w-4 text-slate-400"/></div>
+                                    </div>
+                                    <div class="text-4xl font-bold text-slate-900">128+ Pengajuan</div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div class="flex items-end justify-between h-32 gap-2 mt-4">
+                                        <div class="w-full bg-brand-100 rounded-t-sm h-[40%]"></div>
+                                        <div class="w-full bg-brand-500 rounded-t-sm h-[70%]"></div>
+                                        <div class="w-full bg-brand-200 rounded-t-sm h-[50%]"></div>
+                                        <div class="w-full bg-brand-100 rounded-t-sm h-[30%]"></div>
+                                        <div class="w-full bg-brand-300 rounded-t-sm h-[60%]"></div>
+                                        <div class="w-full bg-brand-400 rounded-t-sm h-[80%]"></div>
+                                        <div class="w-full bg-brand-500 rounded-t-sm h-[90%]"></div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card class="absolute bottom-10 left-0 w-[85%] h-[220px] bg-slate-900 text-white shadow-2xl border-none rounded-2xl z-20 overflow-hidden">
+                                <CardHeader>
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <CardTitle class="text-lg font-medium text-slate-300">Status Permohonan</CardTitle>
+                                            <div class="mt-2 text-3xl font-bold">Siap Diunduh</div>
+                                        </div>
+                                        <div class="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                                            <TrendingUp class="h-3 w-3" /> Selesai
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent class="mt-4 space-y-4">
+                                    <div class="flex items-center gap-4 bg-white/5 p-3 rounded-lg border border-white/10">
+                                        <div class="p-2 bg-brand-500 rounded-full"><FileText class="h-5 w-5 text-white" /></div>
+                                        <div>
+                                            <p class="text-sm font-semibold">Surat Keterangan Domisili</p>
+                                            <p class="text-xs text-slate-400">Diajukan: 24 Nov 2025</p>
+                                        </div>
+                                    </div>
+                                    <div class="absolute bottom-6 right-6">
+                                        <Button size="icon" class="rounded-full bg-brand-500 hover:bg-brand-400 text-white shadow-lg h-12 w-12">
+                                            <ArrowRight class="h-5 w-5" />
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <section id="fitur" class="py-24 bg-slate-50">
+                <div class="mx-auto max-w-7xl px-6 lg:px-8">
+                    <div class="text-center max-w-2xl mx-auto mb-16">
+                        <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Layanan Serba Digital</h2>
+                        <p class="mt-4 text-lg text-slate-600">Kami menghadirkan fitur-fitur terbaik untuk memudahkan kebutuhan administrasi Anda.</p>
                     </div>
                     
-                    <div>
-                        <h4 class="font-bold text-slate-900 mb-4">Layanan</h4>
-                        <ul class="space-y-2 text-sm text-slate-600">
-                            <li><a href="#" class="hover:text-slate-900">Surat Keterangan</a></li>
-                            <li><a href="#" class="hover:text-slate-900">Pengantar SKCK</a></li>
-                            <li><a href="#" class="hover:text-slate-900">Izin Usaha</a></li>
-                            <li><a href="#" class="hover:text-slate-900">Konsultasi AI</a></li>
-                        </ul>
-                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <Card class="border-none shadow-sm hover:shadow-xl transition-all duration-300">
+                            <CardHeader>
+                                <div class="w-12 h-12 bg-brand-100 rounded-xl flex items-center justify-center mb-4">
+                                    <FileText class="h-6 w-6 text-brand-600" />
+                                </div>
+                                <CardTitle>Pengajuan Mandiri</CardTitle>
+                            </CardHeader>
+                            <CardContent class="text-slate-600">
+                                Buat surat pengantar KTP, KK, SKCK, dan surat keterangan lainnya langsung dari dashboard pribadi Anda.
+                            </CardContent>
+                        </Card>
 
-                    <div>
-                        <h4 class="font-bold text-slate-900 mb-4">Kontak</h4>
-                        <ul class="space-y-2 text-sm text-slate-600">
-                            <li>Kantor Kepala Desa</li>
-                            <li>Jl. Raya Desa No. 1</li>
-                            <li>(021) 1234-5678</li>
-                            <li>admin@desasmart.id</li>
-                        </ul>
+                        <Card class="border-none shadow-sm hover:shadow-xl transition-all duration-300">
+                            <CardHeader>
+                                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                                    <Users class="h-6 w-6 text-blue-600" />
+                                </div>
+                                <CardTitle>Asisten Cerdas (SiDesa)</CardTitle>
+                            </CardHeader>
+                            <CardContent class="text-slate-600">
+                                Bingung syarat surat? Tanya langsung ke Chatbot AI kami yang siap membantu 24 jam non-stop.
+                            </CardContent>
+                        </Card>
+
+                        <Card class="border-none shadow-sm hover:shadow-xl transition-all duration-300">
+                            <CardHeader>
+                                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
+                                    <CheckCircle2 class="h-6 w-6 text-green-600" />
+                                </div>
+                                <CardTitle>Verifikasi Cepat</CardTitle>
+                            </CardHeader>
+                            <CardContent class="text-slate-600">
+                                Proses persetujuan oleh staf desa dilakukan secara realtime. Dapatkan notifikasi saat dokumen selesai.
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
-                
-                <Separator class="mb-8" />
-                
-                <div class="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500">
-                    <p>&copy; {{ new Date().getFullYear() }} Pemerintah Desa Smart Digital. All rights reserved.</p>
-                    <p>Laravel v{{ laravelVersion }} (PHP v{{ phpVersion }})</p>
+            </section>
+
+            <footer class="bg-white border-t border-slate-100 py-12">
+                <div class="mx-auto max-w-7xl px-6 lg:px-8 text-center">
+                    <p class="text-slate-500 text-sm">
+                        &copy; 2025 Pemerintah Desa Smart Digital. Dibuat dengan ❤️ untuk warga.
+                    </p>
                 </div>
-            </div>
-        </footer>
+            </footer>
+        </main>
     </div>
 </template>
+
+<style scoped>
+/* Animasi blob background */
+@keyframes blob {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+.animate-blob {
+  animation: blob 7s infinite;
+}
+</style>
