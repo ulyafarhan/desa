@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, onUnmounted } from 'vue';
 import axios from 'axios';
 
 const isOpen = ref(false);
@@ -7,53 +7,75 @@ const message = ref('');
 const messages = ref([]);
 const chatContainer = ref(null);
 const isSending = ref(false);
+let pollingInterval = null;
 
 const toggleChat = () => {
     isOpen.value = !isOpen.value;
     if (isOpen.value) {
         fetchMessages();
+        startPolling();
         scrollToBottom();
+    } else {
+        stopPolling();
+    }
+};
+
+const startPolling = () => {
+    if (!pollingInterval) {
+        pollingInterval = setInterval(() => {
+            if (isOpen.value && !isSending.value) {
+                fetchMessages();
+            }
+        }, 5000);
+    }
+};
+
+const stopPolling = () => {
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
     }
 };
 
 const fetchMessages = async () => {
     try {
         const response = await axios.get(route('chat.history'));
-        // Mapping role dari database (user/model) ke format frontend (is_admin_reply)
         messages.value = response.data.map(msg => ({
             ...msg,
             is_admin_reply: msg.role === 'model'
         }));
-        scrollToBottom();
+        
+        // Auto scroll jika user berada di bawah
+        if (chatContainer.value && chatContainer.value.scrollTop + chatContainer.value.clientHeight >= chatContainer.value.scrollHeight - 100) {
+            scrollToBottom();
+        }
     } catch (error) {
-        console.error("Gagal memuat chat:", error);
+        console.error("Error fetching chat:", error);
     }
 };
 
 const sendMessage = async () => {
     if (!message.value.trim()) return;
 
-    // 1. Tampilkan pesan user secara optimistic
     const userMsg = message.value;
-    const tempMessage = {
+    
+    // Optimistic UI
+    messages.value.push({
         message: userMsg,
         is_admin_reply: false,
         role: 'user',
         created_at: new Date().toISOString()
-    };
+    });
     
-    messages.value.push(tempMessage);
     message.value = '';
-    scrollToBottom();
     isSending.value = true;
+    scrollToBottom();
 
     try {
-        // 2. Kirim ke server
         const response = await axios.post(route('chat.send'), {
             message: userMsg
         });
 
-        // 3. Masukkan balasan AI ke chat box
         if (response.data.reply) {
             messages.value.push({
                 message: response.data.reply,
@@ -64,7 +86,13 @@ const sendMessage = async () => {
             scrollToBottom();
         }
     } catch (error) {
-        console.error("Gagal mengirim pesan:", error);
+        console.error("Error sending message:", error);
+        messages.value.push({
+            message: "Gagal mengirim pesan. Coba lagi nanti.",
+            is_admin_reply: true,
+            role: 'model',
+            is_error: true
+        });
     } finally {
         isSending.value = false;
     }
@@ -77,19 +105,17 @@ const scrollToBottom = async () => {
     }
 };
 
-// Polling
-setInterval(() => {
-    if (isOpen.value && !isSending.value) {
-        fetchMessages();
-    }
-}, 5000);
+// Bersihkan interval saat komponen dihancurkan
+onUnmounted(() => {
+    stopPolling();
+});
 </script>
 
 <template>
-    <div class="fixed bottom-5 right-5 z-50">
+    <div class="fixed bottom-5 right-5 z-50 font-sans">
         <button 
             @click="toggleChat"
-            class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-300 flex items-center justify-center"
+            class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-300 flex items-center justify-center transform hover:scale-105"
         >
             <span v-if="!isOpen">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -103,16 +129,18 @@ setInterval(() => {
             </span>
         </button>
 
-        <div v-if="isOpen" class="absolute bottom-20 right-0 w-80 md:w-96 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden flex flex-col h-[500px]">
-            <div class="bg-blue-600 p-4 text-white font-bold flex justify-between items-center">
-                <span>Layanan Warga</span>
-                <span class="text-xs bg-blue-500 px-2 py-1 rounded">Online</span>
+        <div v-show="isOpen" class="absolute bottom-20 right-0 w-80 md:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[500px] transition-all duration-300">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-500 p-4 text-white shadow-md flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-lg">SiDesa Assistant</h3>
+                    <p class="text-xs text-blue-100">Siap membantu 24/7</p>
+                </div>
+                <span class="text-[10px] uppercase tracking-wider bg-green-400 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">Online</span>
             </div>
 
             <div ref="chatContainer" class="flex-1 p-4 overflow-y-auto bg-gray-50 space-y-4">
-                <div v-if="messages.length === 0" class="text-center text-gray-400 mt-10 text-sm">
-                    <p>Halo! Ada yang bisa kami bantu?</p>
-                    <p>Silakan tinggalkan pesan.</p>
+                <div v-if="messages.length === 0" class="flex flex-col items-center justify-center h-full text-gray-400 space-y-2">
+                    <p class="text-sm">Halo! Ada yang bisa saya bantu?</p>
                 </div>
 
                 <div 
@@ -122,30 +150,42 @@ setInterval(() => {
                     :class="msg.is_admin_reply ? 'items-start' : 'items-end'"
                 >
                     <div 
-                        class="max-w-[80%] rounded-lg p-3 text-sm shadow-sm"
-                        :class="msg.is_admin_reply 
-                            ? 'bg-white text-gray-800 border border-gray-200 rounded-tl-none' 
-                            : 'bg-blue-600 text-white rounded-tr-none'"
+                        class="max-w-[85%] rounded-2xl px-4 py-2 text-sm shadow-sm leading-relaxed"
+                        :class="[
+                            msg.is_admin_reply 
+                                ? 'bg-white text-gray-800 border border-gray-200 rounded-tl-none' 
+                                : 'bg-blue-600 text-white rounded-tr-none',
+                            msg.is_error ? 'bg-red-50 text-red-600 border-red-200' : ''
+                        ]"
                     >
-                        {{ msg.message }}
+                        <span v-html="msg.message.replace(/\n/g, '<br>')"></span>
                     </div>
-                    <span class="text-[10px] text-gray-400 mt-1">
-                        {{ msg.is_admin_reply ? 'Admin' : 'Anda' }}
+                    <span class="text-[10px] text-gray-400 mt-1 px-1">
+                        {{ msg.is_admin_reply ? 'SiDesa' : 'Anda' }}
                     </span>
+                </div>
+                
+                <div v-if="isSending" class="flex items-start">
+                    <div class="bg-gray-200 rounded-full px-4 py-2 rounded-tl-none flex space-x-1">
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
+                    </div>
                 </div>
             </div>
 
-            <div class="p-3 bg-white border-t border-gray-200">
-                <form @submit.prevent="sendMessage" class="flex gap-2">
+            <div class="p-3 bg-white border-t border-gray-100">
+                <form @submit.prevent="sendMessage" class="flex gap-2 items-center">
                     <input 
                         v-model="message" 
                         type="text" 
-                        placeholder="Tulis pesan..." 
-                        class="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        placeholder="Ketik pesan..." 
+                        class="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                        :disabled="isSending"
                     />
                     <button 
                         type="submit" 
-                        class="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 disabled:opacity-50"
+                        class="bg-blue-600 text-white p-2.5 rounded-full hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-md"
                         :disabled="!message || isSending"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
