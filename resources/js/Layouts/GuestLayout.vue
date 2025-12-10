@@ -1,5 +1,6 @@
 <script setup>
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import ChatWidget from '@/Components/ChatWidget.vue'; // Import ChatWidget
 import { Link } from '@inertiajs/vue3';
 </script>
 
@@ -18,5 +19,7 @@ import { Link } from '@inertiajs/vue3';
         >
             <slot />
         </div>
+
+        <ChatWidget />
     </div>
 </template>

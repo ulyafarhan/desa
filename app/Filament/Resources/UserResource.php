@@ -9,6 +9,10 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\BulkAction; // Import BulkAction
+use Illuminate\Database\Eloquent\Collection; // Import Collection
+use Filament\Notifications\Notification; // Import Notification
+use Illuminate\Support\Carbon; // Import Carbon untuk timestamp
 
 class UserResource extends Resource
 {
@@ -64,8 +68,8 @@ class UserResource extends Resource
                         Forms\Components\TextInput::make('password')
                             ->label('Password (Isi jika ingin ubah)')
                             ->password()
-                            ->dehydrated(fn (?string $state): bool => filled($state)) // Hanya simpan jika diisi
-                            ->required(fn (string $operation): bool => $operation === 'create'), // Wajib saat membuat baru
+                            ->dehydrated(fn (?string $state): bool => filled($state))
+                            ->required(fn (string $operation): bool => $operation === 'create'),
                     ])->columns(2),
             ]);
     }
@@ -87,6 +91,65 @@ class UserResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    
+                    // BULK ACTION: VERIFIKASI MASSAL
+                    BulkAction::make('verifyUsers')
+                        ->label('Verifikasi Akun Massal')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records) {
+                            $processedCount = 0;
+                            
+                            $records->each(function (User $record) use (&$processedCount) {
+                                // Hanya verifikasi yang statusnya pending
+                                if ($record->status_akun === 'pending') {
+                                    $record->update([
+                                        'status_akun' => 'verified',
+                                        'email_verified_at' => Carbon::now(), // Set email verified
+                                    ]);
+                                    $processedCount++;
+                                }
+                            });
+                            
+                            Notification::make()
+                                ->title('Verifikasi Massal Berhasil')
+                                ->body($processedCount . ' akun pengguna berhasil diverifikasi.')
+                                ->success()
+                                ->send();
+                        })
+                        // FIX: Agar tidak error null, gunakan null-safe operator
+                        ->visible(fn (?Collection $records) => 
+                            $records?->contains(fn ($record) => $record->status_akun === 'pending')
+                        ),
+                        
+                    // BULK ACTION: BLOKIR MASSAL
+                    BulkAction::make('blockUsers')
+                        ->label('Blokir Akun Massal')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records) {
+                            $processedCount = 0;
+                            $records->each(function (User $record) use (&$processedCount) {
+                                if ($record->status_akun !== 'blocked') {
+                                    $record->update(['status_akun' => 'blocked']);
+                                    $processedCount++;
+                                }
+                            });
+                            
+                            Notification::make()
+                                ->title('Blokir Massal Berhasil')
+                                ->body($processedCount . ' akun pengguna berhasil diblokir.')
+                                ->danger()
+                                ->send();
+                        }),
+                        
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
             ]);
     }
 

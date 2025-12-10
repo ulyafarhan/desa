@@ -13,7 +13,7 @@ use Filament\Tables\Table;
 use Filament\Tables\Actions\Action;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-
+use Filament\Notifications\Notification; // Wajib diimpor untuk notifikasi
 
 class SuratRequestResource extends Resource
 {
@@ -100,11 +100,12 @@ class SuratRequestResource extends Resource
             ->actions([
                 Tables\Actions\Action::make('view_pdf')
                     ->label('Lihat Surat')
-                    ->icon('heroicon-o-document-magnifying-glass') // Icon Kaca Pembesar
-                    ->color('info') // Warna Biru
+                    ->icon('heroicon-o-document-magnifying-glass')
+                    ->color('info')
                     ->url(fn (SuratRequest $record) => route('dokumen.show', $record)) 
                     ->openUrlInNewTab() 
                     ->visible(fn (SuratRequest $record) => $record->status === 'completed'),
+                    
                 // ACTION: SETUJUI (GATEKEEPER)
                 Action::make('approve')
                     ->label('Setujui & Proses')
@@ -144,44 +145,81 @@ class SuratRequestResource extends Resource
                 Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+                Tables\Actions\BulkActionGroup::make([
+                    
+                    // 1. BULK ACTION: SETUJUI MASSAL
+                    Tables\Actions\BulkAction::make('batch_approve')
+                        ->label('Setujui Massal & Kirim ke Antrian')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->form([
+                            Forms\Components\Select::make('pejabat_id')
+                                ->label('Pilih Pejabat Penanda Tangan')
+                                ->options(PejabatDesa::where('status_aktif', true)->pluck('nama_pejabat', 'id'))
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $processedCount = 0;
+                            
+                            $records->each(function (SuratRequest $record) use ($data, &$processedCount) {
+                                if ($record->status === 'pending') {
+                                    $record->update([
+                                        'status' => 'in_queue',
+                                        'pejabat_id' => $data['pejabat_id'],
+                                    ]);
+                                    $processedCount++;
+                                }
+                            });
+                            
+                            Notification::make()
+                                ->title('Persetujuan Massal Berhasil')
+                                ->body($processedCount . ' permintaan surat telah dikirim ke Antrian.')
+                                ->success()
+                                ->send();
+                        })
+                        // FIX: Hapus type hint Collection dan gunakan null-safe operator
+                        ->visible(fn (?Collection $records) => 
+                            $records?->contains(fn ($record) => $record->status === 'pending')
+                        ),
 
-                Tables\Actions\BulkAction::make('batch_approve')
-                    ->label('Setujui Massal & Kirim ke Antrian')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->form([
-                        // Wajib pilih pejabat penanda tangan untuk semua surat yang dipilih
-                        Forms\Components\Select::make('pejabat_id')
-                            ->label('Pilih Pejabat Penanda Tangan')
-                            // Pastikan PejabatDesa sudah diimpor: use App\Models\PejabatDesa;
-                            ->options(PejabatDesa::where('status_aktif', true)->pluck('nama_pejabat', 'id'))
-                            ->required(),
-                    ])
-                    ->action(function (Collection $records, array $data) {
-                        // Logika: Loop melalui semua surat yang dipilih
-                        $records->each(function (SuratRequest $record) use ($data) {
-                            // Hanya proses surat yang statusnya masih pending
-                            if ($record->status === 'pending') {
-                                $record->update([
-                                    'status' => 'in_queue',
-                                    'pejabat_id' => $data['pejabat_id'],
-                                ]);
-                            }
-                        });
+                    // 2. BULK ACTION: TOLAK MASSAL
+                    Tables\Actions\BulkAction::make('batch_reject')
+                        ->label('Tolak Massal')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->form([
+                            Forms\Components\Textarea::make('alasan')
+                                ->required()
+                                ->label('Alasan Penolakan Massal'),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $processedCount = 0;
+                            
+                            $records->each(function (SuratRequest $record) use ($data, &$processedCount) {
+                                if ($record->status === 'pending') {
+                                    $record->update([
+                                        'status' => 'rejected',
+                                        'catatan_admin' => $data['alasan']
+                                    ]);
+                                    $processedCount++;
+                                }
+                            });
+                            
+                            Notification::make()
+                                ->title('Penolakan Massal Berhasil')
+                                ->body($processedCount . ' permintaan surat berhasil ditolak.')
+                                ->danger()
+                                ->send();
+                        })
+                        // FIX: Hapus type hint Collection dan gunakan null-safe operator
+                        ->visible(fn (?Collection $records) => 
+                            $records?->contains(fn ($record) => $record->status === 'pending')
+                        ),
                         
-                        // Notifikasi sukses setelah selesai
-                        \Filament\Notifications\Notification::make()
-                            ->title('Persetujuan Massal Berhasil')
-                            ->body('Surat yang disetujui telah dikirim ke Worker Antrian.')
-                            ->success()
-                            ->send();
-                    })
-                    // Pastikan Collection sudah diimpor: use Illuminate\Support\Collection;
-                    ->visible(fn (?Collection $records) => 
-                        $records !== null && $records->contains(fn ($record) => $record->status === 'pending')
-                    ),
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
             ]);
     }
 

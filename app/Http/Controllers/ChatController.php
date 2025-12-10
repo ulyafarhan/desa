@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Session; // Tambahkan ini
+use Illuminate\Support\Facades\Session;
 
 class ChatController extends Controller
 {
@@ -16,15 +16,14 @@ class ChatController extends Controller
     {
         $request->validate(['message' => 'required|string']);
         
-        // Identifikasi Pengirim
         $user = Auth::user();
         $userId = $user ? $user->id : null;
-        $sessionId = Session::getId(); // Ambil ID browser untuk Tamu
+        $sessionId = Session::getId();
 
         $pesanUser = $request->message;
 
         try {
-            // 1. Simpan Pesan User (Pakai Session ID juga)
+            // 1. Simpan Pesan User
             ChatHistory::create([
                 'user_id'    => $userId,
                 'session_id' => $sessionId,
@@ -32,7 +31,7 @@ class ChatController extends Controller
                 'message'    => $pesanUser,
             ]);
 
-            // 2. Ambil History (Cek berdasarkan User ID ATAU Session ID)
+            // 2. Ambil History Chat
             $historyData = ChatHistory::query()
                 ->where(function($q) use ($userId, $sessionId) {
                     if ($userId) {
@@ -54,14 +53,17 @@ class ChatController extends Controller
                 ];
             }
 
-            // 3. Prompt Sistem
-            $systemInstruction = $this->getSystemInstruction();
-
-            // 4. Kirim ke API
+            // 3. Konfigurasi API Gemini
             $apiKey = env('GEMINI_API_KEY');
-            if (!$apiKey) throw new \Exception("API Key belum disetting");
+            if (!$apiKey) {
+                Log::error('GEMINI_API_KEY tidak ditemukan di .env');
+                throw new \Exception("Konfigurasi server belum lengkap.");
+            }
 
-            $model = "gemini-2.0-flash-lite"; // Gunakan model yang stabil
+            // MENGGUNAKAN MODEL YANG ANDA MINTA
+            $model = "gemini-2.0-flash-lite"; 
+
+            $systemInstruction = $this->getSystemInstruction();
 
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
                 ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
@@ -72,10 +74,12 @@ class ChatController extends Controller
                 ]);
 
             if ($response->failed()) {
+                // Log detail error dari Google untuk debugging
                 Log::error('Gemini API Error: ' . $response->body());
-                $aiReply = "Maaf, sistem sedang sibuk. Silakan coba lagi nanti.";
+                $aiReply = "Maaf, saat ini saya tidak dapat terhubung ke server otak saya. (Error: API)";
             } else {
                 $data = $response->json();
+                // Pastikan ada 'candidates' dan 'content' sebelum mengakses
                 $aiReply = $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Maaf, saya tidak mengerti.';
             }
 
@@ -84,7 +88,7 @@ class ChatController extends Controller
             $aiReply = "Terjadi kesalahan sistem internal.";
         }
 
-        // 5. Simpan Jawaban AI
+        // 4. Simpan Jawaban AI
         ChatHistory::create([
             'user_id'    => $userId,
             'session_id' => $sessionId,
@@ -97,13 +101,26 @@ class ChatController extends Controller
 
     private function getSystemInstruction()
     {
+        // Ambil daftar surat agar AI tahu konteks
         $daftarSurat = SuratTemplate::where('is_active', true)
             ->pluck('judul_surat')
             ->implode(', ');
 
-        return "Anda adalah 'SiDesa', asisten virtual Desa Smart Digital.
-        Konteks: Layanan Surat tersedia: {$daftarSurat}. Jam Kerja: 08.00-15.00.
-        Jawablah dengan sopan dan singkat dalam Bahasa Indonesia.";
+        return "Kamu adalah 'SiDesa', asisten virtual Desa Smart Digital yang ramah dan membantu.
+        
+        Tugasmu:
+        1. Menjawab pertanyaan warga seputar administrasi desa.
+        2. Memberikan informasi tentang layanan surat yang tersedia.
+        
+        Konteks Desa:
+        - Layanan Surat Online yang tersedia: {$daftarSurat}.
+        - Jam Kerja Kantor: Senin-Jumat, 08.00 - 15.00 WIB.
+        - Alamat: Jl. Raya Desa No. 1, Kecamatan Maju Jaya.
+        
+        Gaya Bicara:
+        - Gunakan Bahasa Indonesia yang sopan namun santai.
+        - Jawaban harus singkat, padat, dan langsung ke inti (maksimal 3 paragraf).
+        - Jika warga bertanya hal di luar administrasi desa, jawab dengan sopan bahwa kamu hanya bisa membantu urusan desa.";
     }
 
     public function getHistory()

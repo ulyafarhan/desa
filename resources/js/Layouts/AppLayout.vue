@@ -1,9 +1,10 @@
 <script setup>
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import ChatWidget from '@/Components/ChatWidget.vue'; 
+import { LayoutDashboard, User, LogOut } from 'lucide-vue-next';
 
-// Shadcn Components
+// Komponen UI (Hanya yang pasti ada)
 import { Button } from '@/Components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/Components/ui/avatar';
 import {
@@ -14,23 +15,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/Components/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetTrigger } from '@/Components/ui/sheet'; // Opsional jika ingin sidebar menu
-import { Menu, X, LayoutDashboard, User, LogOut } from 'lucide-vue-next';
 
 defineProps({
     title: String,
 });
 
+// State untuk Menu Mobile
 const showingNavigationDropdown = ref(false);
 
-// Helper untuk inisial nama
 const getInitials = (name) => {
-    return name
-        .split(' ')
-        .map((word) => word[0])
-        .join('')
-        .toUpperCase()
-        .substring(0, 2);
+    return name ? name.split(' ').map((word) => word[0]).join('').toUpperCase().substring(0, 2) : 'UR';
 };
 
 const logout = () => {
@@ -39,26 +33,26 @@ const logout = () => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50/50 font-sans text-slate-900">
+    <div class="min-h-screen bg-slate-50 font-sans text-slate-900">
         <Head :title="title" />
 
-        <nav class="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md">
+        <nav class="sticky top-0 z-50 w-full border-b border-slate-200 bg-white shadow-sm">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16">
                     
                     <div class="flex">
                         <div class="shrink-0 flex items-center gap-2">
                             <Link :href="route('dashboard')">
-                                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">D</div>
+                                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold shadow-sm">D</div>
                             </Link>
-                            <span class="hidden md:block font-bold text-lg tracking-tight">DESA-Smart</span>
+                            <span class="hidden md:block font-bold text-lg tracking-tight text-slate-800">DESA-Smart</span>
                         </div>
 
                         <div class="hidden space-x-2 sm:-my-px sm:ml-10 sm:flex sm:items-center">
                             <Button 
                                 as-child 
                                 variant="ghost" 
-                                :class="{'bg-slate-100 text-slate-900 font-semibold': route().current('dashboard'), 'text-slate-600 hover:text-blue-600': !route().current('dashboard')}"
+                                :class="route().current('dashboard') ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:text-blue-600'"
                             >
                                 <Link :href="route('dashboard')">
                                     <LayoutDashboard class="w-4 h-4 mr-2" />
@@ -69,7 +63,7 @@ const logout = () => {
                             <Button 
                                 as-child 
                                 variant="ghost" 
-                                :class="{'bg-slate-100 text-slate-900 font-semibold': route().current('profile.edit'), 'text-slate-600 hover:text-blue-600': !route().current('profile.edit')}"
+                                :class="route().current('profile.edit') ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-600 hover:text-blue-600'"
                             >
                                 <Link :href="route('profile.edit')">
                                     <User class="w-4 h-4 mr-2" />
@@ -82,7 +76,7 @@ const logout = () => {
                     <div class="hidden sm:flex sm:items-center sm:ml-6">
                         <DropdownMenu>
                             <DropdownMenuTrigger as-child>
-                                <Button variant="ghost" class="relative h-10 w-10 rounded-full hover:bg-slate-100">
+                                <Button variant="ghost" class="relative h-10 w-10 rounded-full hover:bg-slate-100 ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                                     <Avatar class="h-9 w-9 border border-slate-200">
                                         <AvatarImage :src="`https://api.dicebear.com/7.x/initials/svg?seed=${$page.props.auth.user.name}`" alt="Avatar" />
                                         <AvatarFallback>{{ getInitials($page.props.auth.user.name) }}</AvatarFallback>
@@ -113,33 +107,47 @@ const logout = () => {
                     </div>
 
                     <div class="-mr-2 flex items-center sm:hidden">
-                        <Button variant="ghost" size="icon" @click="showingNavigationDropdown = !showingNavigationDropdown">
-                            <Menu v-if="!showingNavigationDropdown" class="h-6 w-6 text-slate-700" />
-                            <X v-else class="h-6 w-6 text-slate-700" />
-                        </Button>
+                        <button
+                            @click="showingNavigationDropdown = !showingNavigationDropdown"
+                            class="inline-flex items-center justify-center p-2 rounded-md text-slate-500 hover:text-slate-700 hover:bg-slate-100 focus:outline-none focus:bg-slate-100 transition duration-150 ease-in-out"
+                        >
+                            <svg v-if="!showingNavigationDropdown" class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                            <svg v-else class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <div v-show="showingNavigationDropdown" class="sm:hidden border-b border-slate-200 bg-white">
+            <div 
+                class="sm:hidden border-b border-slate-200 bg-white" 
+                :class="{ 'block': showingNavigationDropdown, 'hidden': !showingNavigationDropdown }"
+            >
                 <div class="pt-2 pb-3 space-y-1 px-4">
-                    <Link :href="route('dashboard')" @click="showingNavigationDropdown = false">
-                        <div class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors"
-                             :class="route().current('dashboard') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'">
-                            <LayoutDashboard class="w-5 h-5 mr-3" />
-                            Dashboard
-                        </div>
+                    <Link 
+                        :href="route('dashboard')" 
+                        @click="showingNavigationDropdown = false"
+                        class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors"
+                        :class="route().current('dashboard') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'"
+                    >
+                        <LayoutDashboard class="w-5 h-5 mr-3" />
+                        Dashboard
                     </Link>
-                    <Link :href="route('profile.edit')" @click="showingNavigationDropdown = false">
-                        <div class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors"
-                             :class="route().current('profile.edit') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'">
-                            <User class="w-5 h-5 mr-3" />
-                            Profil Saya
-                        </div>
+                    <Link 
+                        :href="route('profile.edit')" 
+                        @click="showingNavigationDropdown = false"
+                        class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors"
+                        :class="route().current('profile.edit') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'"
+                    >
+                        <User class="w-5 h-5 mr-3" />
+                        Profil Saya
                     </Link>
                 </div>
 
-                <div class="pt-4 pb-4 border-t border-slate-100 px-6 bg-slate-50/50">
+                <div class="pt-4 pb-4 border-t border-slate-100 px-6 bg-slate-50">
                     <div class="flex items-center mb-4">
                         <Avatar class="h-10 w-10 border border-slate-200 mr-3">
                             <AvatarFallback>{{ getInitials($page.props.auth.user.name) }}</AvatarFallback>
@@ -156,7 +164,7 @@ const logout = () => {
             </div>
         </nav>
 
-        <header class="bg-white border-b border-slate-200" v-if="$slots.header">
+        <header class="bg-white border-b border-slate-200 shadow-sm" v-if="$slots.header">
             <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                 <slot name="header" />
             </div>
@@ -166,5 +174,6 @@ const logout = () => {
             <slot />
         </main>
         
-        </div>
+        <ChatWidget />
+    </div>
 </template>

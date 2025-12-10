@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, nextTick } from 'vue';
 import axios from 'axios';
 
 const isOpen = ref(false);
@@ -19,7 +19,11 @@ const toggleChat = () => {
 const fetchMessages = async () => {
     try {
         const response = await axios.get(route('chat.history'));
-        messages.value = response.data;
+        // Mapping role dari database (user/model) ke format frontend (is_admin_reply)
+        messages.value = response.data.map(msg => ({
+            ...msg,
+            is_admin_reply: msg.role === 'model'
+        }));
         scrollToBottom();
     } catch (error) {
         console.error("Gagal memuat chat:", error);
@@ -29,28 +33,38 @@ const fetchMessages = async () => {
 const sendMessage = async () => {
     if (!message.value.trim()) return;
 
+    // 1. Tampilkan pesan user secara optimistic
+    const userMsg = message.value;
     const tempMessage = {
-        message: message.value,
-        is_admin_reply: false, // Pesan user sendiri
-        created_at: new Date().toISOString() // Placeholder waktu
+        message: userMsg,
+        is_admin_reply: false,
+        role: 'user',
+        created_at: new Date().toISOString()
     };
     
-    // Optimistic UI update (tambah pesan langsung ke layar sebelum request selesai)
     messages.value.push(tempMessage);
-    const msgToSend = message.value;
     message.value = '';
     scrollToBottom();
     isSending.value = true;
 
     try {
-        await axios.post(route('chat.send'), {
-            message: msgToSend
+        // 2. Kirim ke server
+        const response = await axios.post(route('chat.send'), {
+            message: userMsg
         });
-        // Refresh untuk memastikan sinkronisasi data (opsional, bisa di-skip jika yakin)
-        // await fetchMessages(); 
+
+        // 3. Masukkan balasan AI ke chat box
+        if (response.data.reply) {
+            messages.value.push({
+                message: response.data.reply,
+                is_admin_reply: true,
+                role: 'model',
+                created_at: new Date().toISOString()
+            });
+            scrollToBottom();
+        }
     } catch (error) {
         console.error("Gagal mengirim pesan:", error);
-        // Hapus pesan jika gagal (opsional)
     } finally {
         isSending.value = false;
     }
@@ -63,9 +77,9 @@ const scrollToBottom = async () => {
     }
 };
 
-// Polling pesan baru setiap 5 detik jika chat terbuka
+// Polling
 setInterval(() => {
-    if (isOpen.value) {
+    if (isOpen.value && !isSending.value) {
         fetchMessages();
     }
 }, 5000);
