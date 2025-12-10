@@ -11,7 +11,7 @@ use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------
-| Public Routes (Halaman Depan)
+| Public Routes (Bisa diakses Siapa Saja)
 |--------------------------------------------------------------------------
 */
 
@@ -31,7 +31,7 @@ Route::get('/panduan', function () {
     return Inertia::render('Panduan', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
-        'dynamicGuides' => $guides, // <-- Kirim data ke Vue
+        'dynamicGuides' => $guides,
     ]);
 })->name('panduan');
 
@@ -42,9 +42,12 @@ Route::get('/kontak', function () {
     ]);
 })->name('kontak');
 
-// Route Chat Publik
+// --- CHAT SYSTEM (GLOBAL) ---
+// Diletakkan di sini agar Tamu (Guest) bisa akses tanpa error 401.
+// Controller akan otomatis mendeteksi apakah pengirimnya User Login atau Tamu.
 Route::post('/chat/send', [ChatController::class, 'sendMessage'])->name('chat.send');
 Route::get('/chat/history', [ChatController::class, 'getHistory'])->name('chat.history');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -53,37 +56,31 @@ Route::get('/chat/history', [ChatController::class, 'getHistory'])->name('chat.h
 */
 
 Route::middleware('auth')->group(function () {
-    // Manajemen Profil Bawaan
+    // Manajemen Profil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     
-    // Lihat Dokumen Aman (Streaming)
-    // Otorisasi detail (apakah user berhak lihat) ditangani di dalam Controller
+    // Lihat Dokumen Aman (Secure Streaming)
     Route::get('/dokumen/lihat/{surat}', [DocumentController::class, 'show'])->name('dokumen.show');
-    Route::get('/chat/history', [ChatController::class, 'getHistory'])->name('chat.history');
-    Route::post('/chat/send', [ChatController::class, 'sendMessage'])->name('chat.send');
 });
+
 
 /*
 |--------------------------------------------------------------------------
-| Warga Area (Wajib Login & Verified)
+| Warga Area (Wajib Login & Email Verified)
 |--------------------------------------------------------------------------
-| Area ini memuat Dashboard Warga dan Formulir Pengajuan.
 */
 
 Route::middleware(['auth', 'verified'])->group(function () {
     
-    // Dashboard Warga (Menggantikan Dashboard default Breeze)
+    // Dashboard Warga
     Route::get('/dashboard', [WargaController::class, 'index'])->name('dashboard');
     
     // Formulir Pengajuan Surat Dinamis
     Route::get('/formulir/{template}', [WargaController::class, 'showForm'])->name('warga.form');
     Route::post('/formulir', [WargaController::class, 'store'])->name('warga.store'); 
-
-    Route::post('/chat/send', [ChatController::class, 'sendMessage'])->name('chat.send');
-    Route::get('/chat/history', [ChatController::class, 'getHistory'])->name('chat.history');
-
+    
 });
 
 require __DIR__.'/auth.php';

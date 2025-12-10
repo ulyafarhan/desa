@@ -13,8 +13,13 @@ return new class extends Migration
     {
         Schema::create('chat_histories', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->enum('role', ['user', 'model']); // user = warga, model = AI
+            // Ubah jadi nullable agar Tamu bisa masuk
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            
+            // Tambahkan Session ID untuk melacak Tamu
+            $table->string('session_id')->index();
+            
+            $table->enum('role', ['user', 'model']);
             $table->text('message');
             $table->timestamps();
         });

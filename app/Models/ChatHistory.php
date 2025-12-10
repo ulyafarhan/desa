@@ -9,5 +9,5 @@ class ChatHistory extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'role', 'message'];
+    protected $fillable = ['user_id', 'session_id', 'role', 'message'];
 }

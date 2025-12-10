@@ -2,7 +2,6 @@
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
-import ChatWidget from '@/Components/ChatWidget.vue';
 
 // Shadcn Components
 import { Button } from '@/Components/ui/button';
@@ -15,6 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/Components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetTrigger } from '@/Components/ui/sheet'; // Opsional jika ingin sidebar menu
+import { Menu, X, LayoutDashboard, User, LogOut } from 'lucide-vue-next';
 
 defineProps({
     title: String,
@@ -22,7 +23,7 @@ defineProps({
 
 const showingNavigationDropdown = ref(false);
 
-// Helper untuk inisial nama (Misal: "Ulya Farhan" -> "UF")
+// Helper untuk inisial nama
 const getInitials = (name) => {
     return name
         .split(' ')
@@ -38,35 +39,42 @@ const logout = () => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50/50">
+    <div class="min-h-screen bg-slate-50/50 font-sans text-slate-900">
         <Head :title="title" />
 
-        <nav class="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md">
+        <nav class="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16">
                     
                     <div class="flex">
-                        <div class="shrink-0 flex items-center">
+                        <div class="shrink-0 flex items-center gap-2">
                             <Link :href="route('dashboard')">
-                                <ApplicationLogo class="block h-9 w-auto fill-current text-slate-900" />
+                                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">D</div>
                             </Link>
+                            <span class="hidden md:block font-bold text-lg tracking-tight">DESA-Smart</span>
                         </div>
 
                         <div class="hidden space-x-2 sm:-my-px sm:ml-10 sm:flex sm:items-center">
                             <Button 
                                 as-child 
                                 variant="ghost" 
-                                :class="{'bg-slate-100 text-slate-900': route().current('dashboard'), 'text-slate-600': !route().current('dashboard')}"
+                                :class="{'bg-slate-100 text-slate-900 font-semibold': route().current('dashboard'), 'text-slate-600 hover:text-blue-600': !route().current('dashboard')}"
                             >
-                                <Link :href="route('dashboard')">Dashboard</Link>
+                                <Link :href="route('dashboard')">
+                                    <LayoutDashboard class="w-4 h-4 mr-2" />
+                                    Dashboard
+                                </Link>
                             </Button>
                             
                             <Button 
                                 as-child 
                                 variant="ghost" 
-                                :class="{'bg-slate-100 text-slate-900': route().current('profile.edit'), 'text-slate-600': !route().current('profile.edit')}"
+                                :class="{'bg-slate-100 text-slate-900 font-semibold': route().current('profile.edit'), 'text-slate-600 hover:text-blue-600': !route().current('profile.edit')}"
                             >
-                                <Link :href="route('profile.edit')">Profil Saya</Link>
+                                <Link :href="route('profile.edit')">
+                                    <User class="w-4 h-4 mr-2" />
+                                    Profil Warga
+                                </Link>
                             </Button>
                         </div>
                     </div>
@@ -74,7 +82,7 @@ const logout = () => {
                     <div class="hidden sm:flex sm:items-center sm:ml-6">
                         <DropdownMenu>
                             <DropdownMenuTrigger as-child>
-                                <Button variant="ghost" class="relative h-10 w-10 rounded-full">
+                                <Button variant="ghost" class="relative h-10 w-10 rounded-full hover:bg-slate-100">
                                     <Avatar class="h-9 w-9 border border-slate-200">
                                         <AvatarImage :src="`https://api.dicebear.com/7.x/initials/svg?seed=${$page.props.auth.user.name}`" alt="Avatar" />
                                         <AvatarFallback>{{ getInitials($page.props.auth.user.name) }}</AvatarFallback>
@@ -84,21 +92,21 @@ const logout = () => {
                             <DropdownMenuContent class="w-56" align="end">
                                 <DropdownMenuLabel class="font-normal">
                                     <div class="flex flex-col space-y-1">
-                                        <p class="text-sm font-medium leading-none">{{ $page.props.auth.user.name }}</p>
-                                        <p class="text-xs leading-none text-muted-foreground">{{ $page.props.auth.user.email }}</p>
+                                        <p class="text-sm font-medium leading-none truncate">{{ $page.props.auth.user.name }}</p>
+                                        <p class="text-xs leading-none text-muted-foreground truncate">{{ $page.props.auth.user.email }}</p>
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem as-child>
-                                    <Link :href="route('profile.edit')" class="w-full cursor-pointer">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 h-4 w-4"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                    <Link :href="route('profile.edit')" class="w-full cursor-pointer flex items-center">
+                                        <User class="mr-2 h-4 w-4" />
                                         Pengaturan Profil
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem @click="logout" class="text-red-600 cursor-pointer focus:text-red-600">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 h-4 w-4"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-                                    Keluar (Logout)
+                                <DropdownMenuItem @click="logout" class="text-red-600 cursor-pointer focus:text-red-600 flex items-center">
+                                    <LogOut class="mr-2 h-4 w-4" />
+                                    Keluar
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -106,37 +114,43 @@ const logout = () => {
 
                     <div class="-mr-2 flex items-center sm:hidden">
                         <Button variant="ghost" size="icon" @click="showingNavigationDropdown = !showingNavigationDropdown">
-                            <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                                <path :class="{'hidden': showingNavigationDropdown, 'inline-flex': !showingNavigationDropdown }" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                                <path :class="{'hidden': !showingNavigationDropdown, 'inline-flex': showingNavigationDropdown }" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <Menu v-if="!showingNavigationDropdown" class="h-6 w-6 text-slate-700" />
+                            <X v-else class="h-6 w-6 text-slate-700" />
                         </Button>
                     </div>
                 </div>
             </div>
 
-            <div :class="{'block': showingNavigationDropdown, 'hidden': !showingNavigationDropdown}" class="sm:hidden border-b border-slate-200 bg-white">
+            <div v-show="showingNavigationDropdown" class="sm:hidden border-b border-slate-200 bg-white">
                 <div class="pt-2 pb-3 space-y-1 px-4">
-                    <Button as-child variant="ghost" class="w-full justify-start" :class="{'bg-slate-100': route().current('dashboard')}">
-                        <Link :href="route('dashboard')">Dashboard</Link>
-                    </Button>
-                    <Button as-child variant="ghost" class="w-full justify-start" :class="{'bg-slate-100': route().current('profile.edit')}">
-                        <Link :href="route('profile.edit')">Profil</Link>
-                    </Button>
+                    <Link :href="route('dashboard')" @click="showingNavigationDropdown = false">
+                        <div class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors"
+                             :class="route().current('dashboard') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'">
+                            <LayoutDashboard class="w-5 h-5 mr-3" />
+                            Dashboard
+                        </div>
+                    </Link>
+                    <Link :href="route('profile.edit')" @click="showingNavigationDropdown = false">
+                        <div class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors"
+                             :class="route().current('profile.edit') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'">
+                            <User class="w-5 h-5 mr-3" />
+                            Profil Saya
+                        </div>
+                    </Link>
                 </div>
 
-                <div class="pt-4 pb-4 border-t border-slate-200 px-4">
-                    <div class="flex items-center mb-3">
+                <div class="pt-4 pb-4 border-t border-slate-100 px-6 bg-slate-50/50">
+                    <div class="flex items-center mb-4">
                         <Avatar class="h-10 w-10 border border-slate-200 mr-3">
                             <AvatarFallback>{{ getInitials($page.props.auth.user.name) }}</AvatarFallback>
                         </Avatar>
-                        <div>
-                            <div class="font-medium text-base text-slate-800">{{ $page.props.auth.user.name }}</div>
-                            <div class="font-medium text-sm text-slate-500">{{ $page.props.auth.user.email }}</div>
+                        <div class="overflow-hidden">
+                            <div class="font-bold text-sm text-slate-800 truncate">{{ $page.props.auth.user.name }}</div>
+                            <div class="text-xs text-slate-500 truncate">{{ $page.props.auth.user.email }}</div>
                         </div>
                     </div>
-                    <Button variant="outline" class="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" @click="logout">
-                        Log Out
+                    <Button variant="outline" class="w-full justify-center text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" @click="logout">
+                        <LogOut class="w-4 h-4 mr-2" /> Keluar Aplikasi
                     </Button>
                 </div>
             </div>
@@ -151,6 +165,6 @@ const logout = () => {
         <main>
             <slot />
         </main>
-        <ChatWidget />
-    </div>
+        
+        </div>
 </template>

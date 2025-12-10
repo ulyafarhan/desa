@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session; // Tambahkan ini
 
 class ChatController extends Controller
 {
@@ -15,20 +16,31 @@ class ChatController extends Controller
     {
         $request->validate(['message' => 'required|string']);
         
+        // Identifikasi Pengirim
         $user = Auth::user();
+        $userId = $user ? $user->id : null;
+        $sessionId = Session::getId(); // Ambil ID browser untuk Tamu
+
         $pesanUser = $request->message;
 
         try {
-            // 1. Simpan Pesan User
+            // 1. Simpan Pesan User (Pakai Session ID juga)
             ChatHistory::create([
-                'user_id' => $user->id,
-                'role'    => 'user',
-                'message' => $pesanUser,
+                'user_id'    => $userId,
+                'session_id' => $sessionId,
+                'role'       => 'user',
+                'message'    => $pesanUser,
             ]);
 
-            // 2. Ambil History & Pastikan Format String Aman
-            // Google Gemini sangat sensitif jika ada nilai null
-            $historyData = ChatHistory::where('user_id', $user->id)
+            // 2. Ambil History (Cek berdasarkan User ID ATAU Session ID)
+            $historyData = ChatHistory::query()
+                ->where(function($q) use ($userId, $sessionId) {
+                    if ($userId) {
+                        $q->where('user_id', $userId);
+                    } else {
+                        $q->where('session_id', $sessionId);
+                    }
+                })
                 ->latest()
                 ->take(10)
                 ->get()
@@ -38,7 +50,7 @@ class ChatController extends Controller
             foreach ($historyData as $chat) {
                 $history[] = [
                     'role' => $chat->role === 'user' ? 'user' : 'model',
-                    'parts' => [['text' => (string) $chat->message]] // Paksa jadi string
+                    'parts' => [['text' => (string) $chat->message]]
                 ];
             }
 
@@ -47,24 +59,21 @@ class ChatController extends Controller
 
             // 4. Kirim ke API
             $apiKey = env('GEMINI_API_KEY');
-            if (!$apiKey) {
-                throw new \Exception("API Key belum disetting di .env");
-            }
+            if (!$apiKey) throw new \Exception("API Key belum disetting");
 
-            $model = "gemini-2.0-flash-lite";
+            $model = "gemini-2.0-flash-lite"; // Gunakan model yang stabil
 
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
                     'contents' => $history,
                     'systemInstruction' => [
                         'parts' => [['text' => $systemInstruction]]
                     ]
                 ]);
 
-            // Cek jika API gagal
             if ($response->failed()) {
                 Log::error('Gemini API Error: ' . $response->body());
-                $aiReply = "Maaf, saya sedang pusing (Error Server). Coba lagi nanti.";
+                $aiReply = "Maaf, sistem sedang sibuk. Silakan coba lagi nanti.";
             } else {
                 $data = $response->json();
                 $aiReply = $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Maaf, saya tidak mengerti.';
@@ -75,41 +84,41 @@ class ChatController extends Controller
             $aiReply = "Terjadi kesalahan sistem internal.";
         }
 
-        // 5. Simpan Jawaban AI (Apapun hasilnya, tetap simpan agar chat tidak macet)
+        // 5. Simpan Jawaban AI
         ChatHistory::create([
-            'user_id' => $user->id,
-            'role'    => 'model',
-            'message' => $aiReply,
+            'user_id'    => $userId,
+            'session_id' => $sessionId,
+            'role'       => 'model',
+            'message'    => $aiReply,
         ]);
 
         return response()->json(['reply' => $aiReply]);
     }
 
-    // Fungsi khusus untuk menyusun instruksi agar Controller utama tidak berantakan
     private function getSystemInstruction()
     {
-        // Cache query ini jika trafik tinggi, tapi untuk sekarang direct query oke
         $daftarSurat = SuratTemplate::where('is_active', true)
             ->pluck('judul_surat')
             ->implode(', ');
 
         return "Anda adalah 'SiDesa', asisten virtual Desa Smart Digital.
-        
-        Konteks Desa:
-        - Nama: Desa Smart Digital, Kec. Maju Jaya.
-        - Layanan Surat Tersedia: {$daftarSurat}.
-        - Jam Kerja: Senin-Jumat, 08.00 - 15.00 WIB.
-
-        Instruksi Penting:
-        1. Jawablah dengan singkat, ramah, dan to the point.
-        2. Jika warga bertanya cara membuat surat, arahkan ke menu 'Layanan Mandiri' atau 'Dashboard'.
-        3. Gunakan Bahasa Indonesia yang baku namun luwes.
-        4. Jangan menjawab pertanyaan di luar topik administrasi desa.";
+        Konteks: Layanan Surat tersedia: {$daftarSurat}. Jam Kerja: 08.00-15.00.
+        Jawablah dengan sopan dan singkat dalam Bahasa Indonesia.";
     }
 
     public function getHistory()
     {
-        return ChatHistory::where('user_id', Auth::id())
+        $userId = Auth::id();
+        $sessionId = Session::getId();
+
+        return ChatHistory::query()
+            ->where(function($q) use ($userId, $sessionId) {
+                if ($userId) {
+                    $q->where('user_id', $userId);
+                } else {
+                    $q->where('session_id', $sessionId);
+                }
+            })
             ->latest()
             ->take(20)
             ->get()

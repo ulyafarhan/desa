@@ -50,21 +50,10 @@ return new class extends Migration
             $table->index(['status', 'created_at']); 
             $table->index('user_id'); 
         });
-
-        Schema::create('chat_histories', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->enum('role', ['user', 'model']);
-            $table->text('message');
-            $table->timestamps();
-            
-            $table->index(['user_id', 'created_at']);
-        });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('chat_histories');
         Schema::dropIfExists('surat_requests');
         Schema::dropIfExists('surat_templates');
         Schema::dropIfExists('pejabat_desa');
