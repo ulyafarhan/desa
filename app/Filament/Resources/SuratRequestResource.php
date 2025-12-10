@@ -20,6 +20,7 @@ class SuratRequestResource extends Resource
     protected static ?string $model = SuratRequest::class;
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
     protected static ?string $navigationLabel = 'Permintaan Surat';
+    protected static ?string $pluralLabel = 'Permintaan Surat';
     protected static ?string $navigationGroup = 'Pelayanan';
 
     // Optimasi NFR: Eager Load User dan Template

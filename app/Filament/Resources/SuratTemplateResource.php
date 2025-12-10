@@ -15,6 +15,10 @@ class SuratTemplateResource extends Resource
     protected static ?string $model = SuratTemplate::class;
     protected static ?string $navigationIcon = 'heroicon-o-pencil-square';
     protected static ?string $navigationGroup = 'Master Data';
+    protected static ?string $navigationLabel = 'Template Surat';
+    protected static ?string $pluralLabel = 'Template Surat';
+
+
 
     public static function form(Form $form): Form
     {

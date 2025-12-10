@@ -19,6 +19,12 @@ class PanduanResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationLabel = 'Panduan';
+
+    protected static ?string $pluralLabel = 'Panduan';
+
+    protected static ?string $navigationGroup = 'Pelayanan';
+
     public static function form(Form $form): Form
     {
         return $form
