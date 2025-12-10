@@ -17,6 +17,5 @@
     </head>
     <body class="font-sans antialiased">
         @inertia
-        @include('partials.chat-widget')
     </body>
 </html>

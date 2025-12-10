@@ -1,8 +1,8 @@
 <script setup>
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import ChatWidget from '@/Components/ChatWidget.vue'; 
 import { LayoutDashboard, User, LogOut } from 'lucide-vue-next';
+import AiChatWidget from '@/Components/AiChatWidget.vue';
 
 // Komponen UI (Hanya yang pasti ada)
 import { Button } from '@/Components/ui/button';
@@ -174,6 +174,6 @@ const logout = () => {
             <slot />
         </main>
         
-        <ChatWidget />
+        <AiChatWidget />
     </div>
 </template>

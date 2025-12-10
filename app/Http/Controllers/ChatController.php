@@ -35,7 +35,7 @@ class ChatController extends Controller
             'message'    => $pesanUser,
         ]);
 
-        // 2. Ambil History untuk konteks (Oldest to Newest)
+        // 2. Ambil History (10 pesan terakhir)
         $historyData = ChatHistory::query()
             ->where(function($q) use ($userId, $sessionId) {
                 if ($userId) {
@@ -45,9 +45,9 @@ class ChatController extends Controller
                 }
             })
             ->latest()
-            ->take(10) // Ambil 10 pesan terakhir
+            ->take(10)
             ->get()
-            ->reverse() // Balik agar urutannya kronologis (Lama -> Baru)
+            ->sortBy('created_at') // Urutkan dari lama ke baru (Kronologis)
             ->map(function ($chat) {
                 return [
                     'role' => $chat->role, 
@@ -57,12 +57,14 @@ class ChatController extends Controller
             ->values()
             ->toArray();
 
-        // Hapus pesan terakhir (current message) dari history agar tidak duplikat saat dikirim ke startChat
-        // karena sendMessage() di service akan mengirim pesan ini secara terpisah.
+        // Hapus pesan terakhir (current message) dari array history agar tidak double
+        // karena Service kita akan menambahkannya sendiri sebagai 'newMessage'
         array_pop($historyData);
 
         // 3. Panggil Service Gemini
         $systemInstruction = $this->getSystemInstruction();
+        
+        // Panggil method chat dengan 3 parameter
         $aiReply = $this->geminiService->chat($historyData, $pesanUser, $systemInstruction);
 
         // 4. Simpan Jawaban AI ke DB
@@ -78,20 +80,21 @@ class ChatController extends Controller
 
     private function getSystemInstruction()
     {
+        // Ambil data surat untuk konteks
         $daftarSurat = SuratTemplate::where('is_active', true)
             ->pluck('judul_surat')
             ->implode(', ');
 
-        return "Kamu adalah 'SiDesa', asisten virtual Desa Smart Digital yang ramah.
+        return "Kamu adalah 'SiDesa', asisten virtual Desa Smart Digital.
         
-        Data Desa:
-        - Layanan Surat: {$daftarSurat}.
+        Konteks Desa:
+        - Layanan Surat Tersedia: {$daftarSurat}.
         - Jam Kerja: Senin-Jumat, 08.00 - 15.00 WIB.
         
         Instruksi:
-        - Jawab sapaan dengan ramah.
-        - Fokus menjawab pertanyaan seputar administrasi desa.
-        - Gunakan Bahasa Indonesia yang sopan dan ringkas (maksimal 3 paragraf).";
+        - Jawablah pertanyaan warga dengan bahasa Indonesia yang sopan dan membantu.
+        - Jika ditanya tentang surat, sebutkan surat yang tersedia di atas.
+        - Jawaban harus ringkas (maksimal 2-3 paragraf pendek).";
     }
 
     public function getHistory()

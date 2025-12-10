@@ -7,6 +7,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\WargaController;
 use App\Http\Controllers\ChatController;
 use App\Models\Panduan;
+use App\Http\Controllers\AiChatController;
 use Inertia\Inertia;
 
 /*
@@ -63,6 +64,9 @@ Route::middleware('auth')->group(function () {
     
     // Lihat Dokumen Aman (Secure Streaming)
     Route::get('/dokumen/lihat/{surat}', [DocumentController::class, 'show'])->name('dokumen.show');
+    Route::get('/api/ai-chat', [AiChatController::class, 'index'])->name('ai.chat.index');
+    Route::post('/api/ai-chat', [AiChatController::class, 'store'])->name('ai.chat.store');
+    Route::delete('/api/ai-chat', [AiChatController::class, 'destroy'])->name('ai.chat.clear');
 });
 
 
