@@ -61,16 +61,13 @@ class ChatController extends Controller
             }
 
             // MENGGUNAKAN MODEL YANG ANDA MINTA
-            $model = "gemini-2.0-flash-lite"; 
+            $model = "gemini-1.0-pro"; 
 
             $systemInstruction = $this->getSystemInstruction();
 
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
                 ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
                     'contents' => $history,
-                    'systemInstruction' => [
-                        'parts' => [['text' => $systemInstruction]]
-                    ]
                 ]);
 
             if ($response->failed()) {
