@@ -7,6 +7,7 @@ import { Input } from '@/Components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/Components/ui/avatar';
 import { Badge } from '@/Components/ui/badge';
+import ChatWidget from '@/Components/ChatWidget.vue';
 // Import Ikon
 import { 
     Menu, X, ArrowRight, CheckCircle2, 
@@ -266,6 +267,7 @@ const isMenuOpen = ref(false);
             </footer>
         </main>
     </div>
+    <ChatWidget />
 </template>
 
 <style scoped>

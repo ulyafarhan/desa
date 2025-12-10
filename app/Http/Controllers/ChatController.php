@@ -11,62 +11,48 @@ use Illuminate\Support\Facades\Log;
 
 class ChatController extends Controller
 {
-    // Mengirim pesan ke AI
     public function sendMessage(Request $request)
     {
         $request->validate(['message' => 'required|string']);
+        
         $user = Auth::user();
         $pesanUser = $request->message;
 
-        // 1. Simpan Pesan User ke Database
-        ChatHistory::create([
-            'user_id' => $user->id,
-            'role' => 'user',
-            'message' => $pesanUser,
-        ]);
-
-        // 2. Siapkan Konteks (Pengetahuan Dasar AI)
-        // Kita ambil daftar surat agar AI tahu layanan apa yang tersedia
-        $daftarSurat = SuratTemplate::where('is_active', true)->pluck('judul_surat')->implode(', ');
-        
-        $systemInstruction = "Anda adalah 'SiDesa', asisten virtual Desa Smart Digital yang ramah dan membantu. 
-        Tugas Anda adalah membantu warga terkait administrasi desa.
-        
-        Pengetahuan Anda:
-        - Nama Desa: Desa Smart Digital, Kec. Maju Jaya.
-        - Layanan Surat yang tersedia saat ini: {$daftarSurat}.
-        - Jam operasional kantor: Senin-Jumat, 08.00 - 15.00.
-        
-        Aturan Menjawab:
-        - Jawab dengan singkat, padat, dan sopan.
-        - Jika warga bertanya cara buat surat, arahkan mereka ke menu 'Dashboard'.
-        - Jangan menjawab hal di luar konteks desa.
-        - Gunakan Bahasa Indonesia yang baik.";
-
-        // 3. Ambil 10 Riwayat Terakhir (Short-term Memory)
-        $history = ChatHistory::where('user_id', $user->id)
-            ->latest()
-            ->take(10)
-            ->get()
-            ->reverse() // Urutkan dari yang terlama ke terbaru
-            ->map(function ($chat) {
-                return [
-                    'role' => $chat->role === 'user' ? 'user' : 'model',
-                    'parts' => [['text' => $chat->message]]
-                ];
-            })
-            ->values()
-            ->toArray();
-
-        // Tambahkan pesan baru ke history untuk dikirim ke API
-        $history[] = [
-            'role' => 'user',
-            'parts' => [['text' => $pesanUser]]
-        ];
-
         try {
-            // 4. Kirim ke Google Gemini API
+            // 1. Simpan Pesan User
+            ChatHistory::create([
+                'user_id' => $user->id,
+                'role'    => 'user',
+                'message' => $pesanUser,
+            ]);
+
+            // 2. Ambil History & Pastikan Format String Aman
+            // Google Gemini sangat sensitif jika ada nilai null
+            $historyData = ChatHistory::where('user_id', $user->id)
+                ->latest()
+                ->take(10)
+                ->get()
+                ->reverse();
+
+            $history = [];
+            foreach ($historyData as $chat) {
+                $history[] = [
+                    'role' => $chat->role === 'user' ? 'user' : 'model',
+                    'parts' => [['text' => (string) $chat->message]] // Paksa jadi string
+                ];
+            }
+
+            // 3. Prompt Sistem
+            $systemInstruction = $this->getSystemInstruction();
+
+            // 4. Kirim ke API
             $apiKey = env('GEMINI_API_KEY');
+            if (!$apiKey) {
+                throw new \Exception("API Key belum disetting di .env");
+            }
+
+            $model = "gemini-2.0-flash-lite";
+
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
                 ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
                     'contents' => $history,
@@ -75,35 +61,57 @@ class ChatController extends Controller
                     ]
                 ]);
 
-            $aiResponseText = "Maaf, saya sedang gangguan.";
-            
-            if ($response->successful()) {
-                $data = $response->json();
-                $aiResponseText = $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Maaf, saya tidak mengerti.';
+            // Cek jika API gagal
+            if ($response->failed()) {
+                Log::error('Gemini API Error: ' . $response->body());
+                $aiReply = "Maaf, saya sedang pusing (Error Server). Coba lagi nanti.";
             } else {
-                Log::error('Gemini Error: ' . $response->body());
+                $data = $response->json();
+                $aiReply = $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Maaf, saya tidak mengerti.';
             }
 
-            // 5. Simpan Jawaban AI
-            ChatHistory::create([
-                'user_id' => $user->id,
-                'role' => 'model',
-                'message' => $aiResponseText,
-            ]);
-
-            return response()->json(['reply' => $aiResponseText]);
-
         } catch (\Exception $e) {
-            return response()->json(['reply' => 'Terjadi kesalahan sistem.'], 500);
+            Log::error("Chat Controller Error: " . $e->getMessage());
+            $aiReply = "Terjadi kesalahan sistem internal.";
         }
+
+        // 5. Simpan Jawaban AI (Apapun hasilnya, tetap simpan agar chat tidak macet)
+        ChatHistory::create([
+            'user_id' => $user->id,
+            'role'    => 'model',
+            'message' => $aiReply,
+        ]);
+
+        return response()->json(['reply' => $aiReply]);
     }
 
-    // Mengambil riwayat saat widget dibuka
+    // Fungsi khusus untuk menyusun instruksi agar Controller utama tidak berantakan
+    private function getSystemInstruction()
+    {
+        // Cache query ini jika trafik tinggi, tapi untuk sekarang direct query oke
+        $daftarSurat = SuratTemplate::where('is_active', true)
+            ->pluck('judul_surat')
+            ->implode(', ');
+
+        return "Anda adalah 'SiDesa', asisten virtual Desa Smart Digital.
+        
+        Konteks Desa:
+        - Nama: Desa Smart Digital, Kec. Maju Jaya.
+        - Layanan Surat Tersedia: {$daftarSurat}.
+        - Jam Kerja: Senin-Jumat, 08.00 - 15.00 WIB.
+
+        Instruksi Penting:
+        1. Jawablah dengan singkat, ramah, dan to the point.
+        2. Jika warga bertanya cara membuat surat, arahkan ke menu 'Layanan Mandiri' atau 'Dashboard'.
+        3. Gunakan Bahasa Indonesia yang baku namun luwes.
+        4. Jangan menjawab pertanyaan di luar topik administrasi desa.";
+    }
+
     public function getHistory()
     {
         return ChatHistory::where('user_id', Auth::id())
             ->latest()
-            ->take(20) // Ambil 20 pesan terakhir
+            ->take(20)
             ->get()
             ->reverse()
             ->values();

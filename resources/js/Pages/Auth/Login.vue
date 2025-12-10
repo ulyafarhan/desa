@@ -17,7 +17,8 @@ defineProps({
 });
 
 const form = useForm({
-    email: '',
+    // PERBAIKAN: Ganti 'email' menjadi 'nik' agar sinkron dengan v-model dan Controller
+    nik: '', 
     password: '',
     remember: false,
 });

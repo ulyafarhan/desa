@@ -42,6 +42,10 @@ Route::get('/kontak', function () {
     ]);
 })->name('kontak');
 
+// Route Chat Publik
+Route::post('/chat/send', [ChatController::class, 'sendMessage'])->name('chat.send');
+Route::get('/chat/history', [ChatController::class, 'getHistory'])->name('chat.history');
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated Routes (Wajib Login)
@@ -57,6 +61,8 @@ Route::middleware('auth')->group(function () {
     // Lihat Dokumen Aman (Streaming)
     // Otorisasi detail (apakah user berhak lihat) ditangani di dalam Controller
     Route::get('/dokumen/lihat/{surat}', [DocumentController::class, 'show'])->name('dokumen.show');
+    Route::get('/chat/history', [ChatController::class, 'getHistory'])->name('chat.history');
+    Route::post('/chat/send', [ChatController::class, 'sendMessage'])->name('chat.send');
 });
 
 /*
