@@ -45,8 +45,9 @@ RUN chmod -R 775 storage bootstrap/cache
 RUN echo '#!/bin/bash' >> /start.sh \
     && echo 'php artisan migrate --force' >> /start.sh \
     && echo 'php artisan storage:link' >> /start.sh \
-    && echo 'exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf' >> /start.sh \
+    && echo 'exec php-fpm' >> /start.sh \
     && chmod +x /start.sh
 
-# Start Application
+# Ganti CMD lama dengan ini:
+# Start Application (Panggil script baru)
 CMD ["/start.sh"]
