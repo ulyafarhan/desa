@@ -42,27 +42,11 @@ RUN chmod -R 775 storage bootstrap/cache
 # STEP 5: Perintah Startup (Entrypoint)
 # Script ini akan dijalankan saat container di-deploy
 # Perintah ini akan berjalan setelah migrasi berhasil
-RUN echo '#!/bin/bash' >> /start.sh \
-    && echo 'set -e' >> /start.sh \
-    && echo 'echo "Starting database migration..."' >> /start.sh \
-    \
-    # --- TAMBAHKAN LOOP WAIT FOR DATABASE ---
-    && echo 'host="${DB_HOST}"' >> /start.sh \
-    && echo 'port="${DB_PORT:-3306}"' >> /start.sh \
-    && echo 'max_attempts=30' >> /start.sh \
-    && echo 'attempt=0' >> /start.sh \
-    && echo 'until [ "$attempt" -ge "$max_attempts" ]' >> /start.sh \
-    && echo 'do' >> /start.sh \
-    && echo '  (echo > /dev/tcp/"$host"/"$port") 2>/dev/null && break' >> /start.sh \
-    && echo '  attempt=$((attempt+1))' >> /start.sh \
-    && echo '  echo "Waiting for database... Attempt $attempt/$max_attempts"' >> /start.sh \
-    && echo '  sleep 2' >> /start.sh \
-    && echo 'done' >> /start.sh \
-    && echo '[ "$attempt" -ge "$max_attempts" ] && echo "Database connection failed after $max_attempts attempts" && exit 1' >> /start.sh \
-    # ------------------------------------------------------------------------------------------------------- \
-    \
-    && echo 'echo "Database is ready. Running migrations..."' >> /start.sh \
-    && echo 'php artisan migrate --force' >> /start.sh \
-    && echo 'echo "Migration complete. Starting web server..."' >> /start.sh \
-    && echo 'exec php-fpm' >> /start.sh \
-    && chmod +x /start.sh
+RUN rm -f /start.sh
+
+# STEP 13: Perintah Startup (Entrypoint)
+# Gunakan entrypoint yang didukung Railway untuk menjalankan PHP FPM dan Migrasi (melalui ENTRYPOINT)
+# Ini adalah metode standar PHP FPM yang akan menjalankan PHP FPM dan tidak crash.
+
+# Gunakan ENTRYPOINT untuk menjalankan migrasi dan kemudian service PHP FPM
+ENTRYPOINT ["/bin/bash", "-c", "php artisan migrate --force && php-fpm"]
