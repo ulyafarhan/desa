@@ -19,6 +19,8 @@ RUN apt-get update && apt-get install -y \
 RUN docker-php-ext-install pdo pdo_mysql opcache \
     && docker-php-ext-install intl zip
 
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
 # STEP 3: Setup Environment
 WORKDIR /app
 
