@@ -1,25 +1,26 @@
 # STEP 1: Gunakan base image PHP 8.3 FPM (FrankenPHP)
 # FrankenPHP adalah server PHP modern dan cepat yang direkomendasikan Railway
-FROM dunglas/frankenphp:php8.3-fpm
+FROM php:8.3-fpm-bookworm
 
 # STEP 2: Instal Ekstensi PHP
-# Instal ekstensi yang dibutuhkan Filament (intl) dan OpenSpout (zip)
-RUN install-php-extensions \
-    intl \
-    zip \
-    pdo_mysql \
-    ctype curl dom fileinfo hash mbstring openssl pcre pdo session tokenizer xml
-
-# STEP 3: Setup Environment
-# Tentukan direktori kerja dan instal git, unzip, zip
-WORKDIR /app
+# Install tool untuk ekstensi PHP
 RUN apt-get update && apt-get install -y \
+    libzip-dev \
+    libicu-dev \
     git \
     unzip \
     zip \
     nodejs \
     npm \
     && rm -rf /var/lib/apt/lists/*
+
+# Instal Ekstensi yang Dibutuhkan Filament (intl) dan OpenSpout (zip)
+# Gunakan docker-php-ext-install
+RUN docker-php-ext-install pdo pdo_mysql opcache \
+    && docker-php-ext-install intl zip
+
+# STEP 3: Setup Environment
+WORKDIR /app
 
 # STEP 4: Copy Kode Aplikasi dan Install Dependencies
 COPY . .
