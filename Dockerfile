@@ -43,11 +43,9 @@ RUN chmod -R 775 storage bootstrap/cache
 # Script ini akan dijalankan saat container di-deploy
 # Perintah ini akan berjalan setelah migrasi berhasil
 RUN echo '#!/bin/bash' >> /start.sh \
+    && echo 'set -e' >> /start.sh \
+    && echo 'echo "Starting database migration..."' >> /start.sh \
     && echo 'php artisan migrate --force' >> /start.sh \
-    && echo 'php artisan storage:link' >> /start.sh \
+    && echo 'echo "Migration complete. Starting web server..."' >> /start.sh \
     && echo 'exec php-fpm' >> /start.sh \
     && chmod +x /start.sh
-
-# Ganti CMD lama dengan ini:
-# Start Application (Panggil script baru)
-CMD ["/start.sh"]
