@@ -227,6 +227,8 @@ class SuratRequestResource extends Resource
     {
         return [
             'index' => Pages\ListSuratRequests::route('/'),
+            'create' => Pages\CreateSuratRequest::route('/create'),
+            'edit' => Pages\EditSuratRequest::route('/{record}/edit'),
         ];
     }
 }

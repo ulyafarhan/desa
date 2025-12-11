@@ -24,7 +24,7 @@ const showingNavigationDropdown = ref(false);
                             <Link :href="route('welcome')">
                                 <ApplicationLogo class="block h-9 w-auto fill-current text-blue-600" />
                             </Link>
-                            <span class="hidden md:block font-bold text-xl tracking-tight text-gray-800">DESA-Smart</span>
+                            <span class="hidden md:block font-extrabold lg:text-2xl tracking-tight text-blue-600">Desa Smart</span>
                         </div>
 
                         <div class="hidden sm:ml-10 sm:flex sm:space-x-8">

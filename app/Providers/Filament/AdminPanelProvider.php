@@ -10,14 +10,15 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-
+use App\Filament\Widgets\StatsOverview;
+use App\Filament\Widgets\SuratChart;
+use App\Filament\Widgets\LatestSurat;
 class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
@@ -27,10 +28,12 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->brandName('Desaku')
+            ->brandName('Desa Smart Digital') 
+            ->favicon(asset('favicon.ico')) 
             ->colors([
-                'primary' => Color::Green,
+                'primary' => Color::Blue, 
             ])
+            
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
@@ -38,8 +41,9 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
+                StatsOverview::class,
+                SuratChart::class,
+                LatestSurat::class,
             ])
             ->middleware([
                 EncryptCookies::class,

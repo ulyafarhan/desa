@@ -51,19 +51,16 @@ class GeminiService
         ];
 
         try {
-            // PERBAIKAN: Tambahkan verify => false untuk mengatasi masalah SSL Laragon
-            $response = Http::withOptions(['verify' => false])
-                ->withHeaders(['Content-Type' => 'application/json'])
+            $response = Http::withHeaders(['Content-Type' => 'application/json'])
                 ->post($this->baseUrl . '?key=' . $this->apiKey, [
                     'contents' => $contents,
                     'generationConfig' => [
                         'temperature' => 0.7,
-                        'maxOutputTokens' => 1000,
+                        'maxOutputTokens' => 300, 
                     ]
                 ]);
 
             if ($response->failed()) {
-                // DEBUG: Tampilkan error langsung ke layar agar terlihat di Tinker
                 $errorBody = $response->json();
                 $errorMessage = $errorBody['error']['message'] ?? $response->body();
                 
