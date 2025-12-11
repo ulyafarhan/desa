@@ -45,6 +45,23 @@ RUN chmod -R 775 storage bootstrap/cache
 RUN echo '#!/bin/bash' >> /start.sh \
     && echo 'set -e' >> /start.sh \
     && echo 'echo "Starting database migration..."' >> /start.sh \
+    \
+    # --- TAMBAHKAN LOOP WAIT FOR DATABASE ---
+    && echo 'host="${DB_HOST}"' >> /start.sh \
+    && echo 'port="${DB_PORT:-3306}"' >> /start.sh \
+    && echo 'max_attempts=30' >> /start.sh \
+    && echo 'attempt=0' >> /start.sh \
+    && echo 'until [ "$attempt" -ge "$max_attempts" ]' >> /start.sh \
+    && echo 'do' >> /start.sh \
+    && echo '  (echo > /dev/tcp/"$host"/"$port") 2>/dev/null && break' >> /start.sh \
+    && echo '  attempt=$((attempt+1))' >> /start.sh \
+    && echo '  echo "Waiting for database... Attempt $attempt/$max_attempts"' >> /start.sh \
+    && echo '  sleep 2' >> /start.sh \
+    && echo 'done' >> /start.sh \
+    && echo '[ "$attempt" -ge "$max_attempts" ] && echo "Database connection failed after $max_attempts attempts" && exit 1' >> /start.sh \
+    # ------------------------------------------------------------------------------------------------------- \
+    \
+    && echo 'echo "Database is ready. Running migrations..."' >> /start.sh \
     && echo 'php artisan migrate --force' >> /start.sh \
     && echo 'echo "Migration complete. Starting web server..."' >> /start.sh \
     && echo 'exec php-fpm' >> /start.sh \
